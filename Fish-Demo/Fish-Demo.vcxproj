@@ -71,8 +71,8 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>D:\任务\游戏项目\raylib-5.5_win64_msvc16\include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\任务\游戏项目\raylib-5.5_win64_msvc16\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>../raylib/include;$(IncludePath)</IncludePath>
+    <LibraryPath>../raylib/lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

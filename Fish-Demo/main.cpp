@@ -34,7 +34,7 @@ int main() {
 
 
 	InitWindow(screen_length_x, screen_length_y, "fish game");
-	Texture2D fish_texture = LoadTexture("D:/任务/游戏项目/img/鱼test.png"), fish_texture2 = LoadTexture("D:/任务/游戏项目/img/鱼 翻转 test.png");
+	Texture2D fish_texture = LoadTexture("../img/鱼test.png"), fish_texture2 = LoadTexture("../img/鱼 翻转 test.png");
 	while (running) {
 
 
