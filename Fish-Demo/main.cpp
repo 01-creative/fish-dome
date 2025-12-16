@@ -42,7 +42,7 @@ void init_fish_pool(fishPool* pool);
 fish_NPC* get_fish(fishPool* pool);
 void release_fish(fishPool* pool, fish_NPC* fishPtr);
 void update_all_fish(fishPool* pool);
-
+void collision(fishPool* pool);
 
 int main() {
 
@@ -55,7 +55,7 @@ int main() {
 
 	fishPool pool;
 	init_fish_pool(&pool);
-	while (running) {
+	while (!WindowShouldClose()) {
 
 
 		playermove(&player);
@@ -160,6 +160,7 @@ void release_fish(fishPool* pool, fish_NPC* fishPtr) {
 		fishPtr->active = 0;  
 	}
 }
+
 void update_all_fish(fishPool* pool) {
 	for (int i = 0; i < MAX_fish; i++) {  
 		if (pool->used[i]) {  
@@ -201,12 +202,50 @@ fish_NPC* create_npcfish(fishPool* pool,float x,float y ,int kind) {
 			newFish->aim[numberofaim][0] = max(100*rand() % screen_length_x,3000);
 			newFish->aim[numberofaim][1] = max(100*rand() % screen_length_y,2000);
 		}
-			  break;
-		default:
+			break;
+		    default:
 			return 0;
 			break;
 		}
-
+		
 	return newFish;
 }
+void collision_npc(fishPool* pool) {
+	for (int i = 0;i < MAX_fish;i++) {
+		if (pool->used[i]) {
+			for (int j = i + 1;j < MAX_fish;j++) {
+				if (pool->used[j]) {
+					if (fabs(pool->fishnpc[i].fish.xy.x + pool->fishnpc[i].fish.xy.y - pool->fishnpc[j].fish.xy.x - pool->fishnpc[j].fish.xy.y)< pool->fishnpc[i].fish.size+ pool->fishnpc[j].fish.size) {
+						if (CheckCollisionCircles(pool->fishnpc[i].fish.xy, pool->fishnpc[i].fish.size, pool->fishnpc[j].fish.xy, pool->fishnpc[j].fish.size)) {
+							if (pool->fishnpc[i].fish.size>pool->fishnpc[j].fish.size) {
+								release_fish(pool, &pool->fishnpc[j]);
+								pool->fishnpc[i].fish.size += 1;//大鱼吃掉小鱼size增加1
+								//速度没写
+							}
+							else {
+								release_fish(pool, &pool->fishnpc[i]);
+								pool->fishnpc[j].fish.size += 1;//大鱼吃掉小鱼size增加1
+								//速度没写
+							}
+						}
+					}
 
+                }
+			}
+			if (fabs(pool->fishnpc[i].fish.xy.x + pool->fishnpc[i].fish.xy.y - player.xy.x - player.xy.y) < pool->fishnpc[i].fish.size +player.size) {
+				if (CheckCollisionCircles(pool->fishnpc[i].fish.xy, pool->fishnpc[i].fish.size, player.xy,player.size)) {
+					if (pool->fishnpc[i].fish.size > player.size) {
+						running = 3; //玩家死亡
+					}
+					else {
+						release_fish(pool, &pool->fishnpc[i]);
+						player.size += 1;//player吃掉小鱼size增加1
+						//速度没写
+					}
+				}
+			}
+
+		}
+	}
+
+}
