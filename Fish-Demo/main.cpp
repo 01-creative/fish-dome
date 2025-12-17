@@ -204,8 +204,8 @@ void update_all_fish(fishPool* pool) {
 			fishPtr->aim[6] = { -100,-100};
 			float k = rand() % 40 / 100.0+0.8;
 			Vector2 direction = { fishPtr->aim[0].x- fishPtr->fish.xy.x,fishPtr->aim[0].y - fishPtr->fish.xy.y };
-			fishPtr->fish.v_xy.x += k*(direction.x)* fishPtr->fish.a/pow(((direction.x)* (direction.x)+ (direction.y)* (direction.y)),0.5);
-			fishPtr->fish.v_xy.y += k*(direction.y) * fishPtr->fish.a / pow(((direction.x) * (direction.x) + (direction.y) * (direction.y)), 0.5);
+			fishPtr->fish.v_xy.x += k*(direction.x)* fishPtr->fish.a/sqrt((direction.x)* (direction.x)+ (direction.y)* (direction.y));
+			fishPtr->fish.v_xy.y += k*(direction.y) * fishPtr->fish.a / sqrt((direction.x) * (direction.x) + (direction.y) * (direction.y));
 			fishPtr->fish.v_xy.x *= 0.9;
 			fishPtr->fish.v_xy.y *= 0.8;
 			// ±ß½ç¼ì²é
