@@ -46,6 +46,7 @@ fish_NPC* get_fish(fishPool* pool);
 void release_fish(fishPool* pool, fish_NPC* fishPtr);
 void update_all_fish(fishPool* pool);
 fish_NPC* create_npcfish(fishPool* pool, float x, float y, int kind);
+Vector2 get_legal_point(void);
 
 
 int main() {
@@ -60,9 +61,9 @@ int main() {
 	fishPool pool;
 	init_fish_pool(&pool);
 
-	create_npcfish(&pool, 300, 300, 1);
 	while (!WindowShouldClose()) {
-		if(runingtime%71==0)create_npcfish(&pool, rand()%screen_length_x, rand()%screen_length_y, 1);
+		Vector2 randpoint = get_legal_point();
+		if(runingtime%39==0)create_npcfish(&pool, randpoint.x,randpoint.y, 1);
 		srand(time(NULL)); 
 		playermove(&player);
 		update_all_fish(&pool);
@@ -201,16 +202,18 @@ void update_all_fish(fishPool* pool) {
 					fishPtr->aim[p] = fishPtr->aim[p + 1];
 			}
 			}
-			fishPtr->aim[6] = { -100,-100};
-			float k = rand() % 40 / 100.0+0.8;
-			Vector2 direction = { fishPtr->aim[0].x- fishPtr->fish.xy.x,fishPtr->aim[0].y - fishPtr->fish.xy.y };
-			fishPtr->fish.v_xy.x += k*(direction.x)* fishPtr->fish.a/sqrt((direction.x)* (direction.x)+ (direction.y)* (direction.y));
-			fishPtr->fish.v_xy.y += k*(direction.y) * fishPtr->fish.a / sqrt((direction.x) * (direction.x) + (direction.y) * (direction.y));
-			fishPtr->fish.v_xy.x *= 0.9;
-			fishPtr->fish.v_xy.y *= 0.8;
+			fishPtr->aim[6] = { 3000,2000};
+			if(rand()%10>1){
+				float k = rand() % 40 / 100.0 + 0.8;
+				Vector2 direction = { fishPtr->aim[0].x - fishPtr->fish.xy.x,fishPtr->aim[0].y - fishPtr->fish.xy.y };
+				fishPtr->fish.v_xy.x += k * (direction.x) * fishPtr->fish.a / sqrt((direction.x) * (direction.x) + (direction.y) * (direction.y));
+				fishPtr->fish.v_xy.y += k * (direction.y) * fishPtr->fish.a / sqrt((direction.x) * (direction.x) + (direction.y) * (direction.y));
+			}
+			fishPtr->fish.v_xy.x *= 0.95;
+			fishPtr->fish.v_xy.y *= 0.9;
 			// ±ß½ç¼ì²é
-			if (fishPtr->fish.xy.x < 0 || fishPtr->fish.xy.x > screen_length_x ||
-				fishPtr->fish.xy.y < 0 || fishPtr->fish.xy.y > screen_length_y) {
+			if (fishPtr->fish.xy.x < -150 || fishPtr->fish.xy.x > screen_length_x+150 ||
+				fishPtr->fish.xy.y < -100 || fishPtr->fish.xy.y > screen_length_y+100) {
 				release_fish(pool, fishPtr); 
 			}
 		}
@@ -231,12 +234,12 @@ fish_NPC* create_npcfish(fishPool* pool,float x,float y ,int kind) {
 			newFish->fish.v_xy.x = (rand() % 7) - 2;
 			newFish->fish.v_xy.y = (rand() % 7) - 2;
 			newFish->fish.size = 20 + rand() % 30;
-			newFish->fish.a = 2;
+			newFish->fish.a = 1.5;
 			newFish->fish.kinds = kind;
 			newFish->fish.image_status = kind;
 			for(int i=0;i<numberofaim;i++){
-				newFish->aim[i].x = rand() % screen_length_x*1.5;
-				newFish->aim[i].y = rand() % screen_length_y*1.5;
+				newFish->aim[i].x = rand() % screen_length_x*1.2;
+				newFish->aim[i].y = rand() % screen_length_y*1.2;
 			}
 			newFish->aim[numberofaim].x = max(100*rand() % screen_length_x,3000);
 			newFish->aim[numberofaim].y = max(100*rand() % screen_length_y,2000);
@@ -250,3 +253,14 @@ fish_NPC* create_npcfish(fishPool* pool,float x,float y ,int kind) {
 	return newFish;
 }
 
+Vector2 get_legal_point(void) {
+	srand(time(NULL));
+	Vector2 point;
+	if(rand()%2==0)
+		point.x = rand() %100 -100;
+	else
+	point.x = rand() %100+ screen_length_x;
+	point.y = rand() % screen_length_y;
+
+	return point;
+}
