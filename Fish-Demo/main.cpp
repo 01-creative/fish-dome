@@ -34,7 +34,7 @@ typedef struct {
 	int active_count;         
 } fishPool;
 
-fish player = { {0,0},{0,0},5,60,0,0,0 };
+fish player = { {0,0},{0,0},5,30,0,0,0 };
 
 int running = 1;//0是退出，1是正常，2是暂停，3是死亡
 int sleeptime = 100, screen_length_x = 2048, screen_length_y = 1152,runingtime=0;
@@ -47,7 +47,7 @@ void release_fish(fishPool* pool, fish_NPC* fishPtr);
 void update_all_fish(fishPool* pool);
 fish_NPC* create_npcfish(fishPool* pool, float x, float y, int kind);
 Vector2 get_legal_point(void);
-
+void collision_npc(fishPool* pool);
 
 int main() {
 
@@ -56,10 +56,13 @@ int main() {
 
 
 	InitWindow(screen_length_x, screen_length_y, "fish game");
-	Texture2D fish_texture = LoadTexture("../img/鱼test.png"), fish_texture2 = LoadTexture("../img/鱼 翻转 test.png");
+	Texture fish_texture[2] = { LoadTexture("../img/小丑鱼 左向 模糊.png"),LoadTexture("../img/小丑鱼 左向 清晰.png") }, fish_texture2[2] = {LoadTexture("../img/小丑鱼 右向 模糊.png"),LoadTexture("../img/小丑鱼 右向 清晰.png")};
+
+
 	SetWindowState(FLAG_VSYNC_HINT);
 	fishPool pool;
 	init_fish_pool(&pool);
+
 
 	while (!WindowShouldClose()) {
 		Vector2 randpoint = get_legal_point();
@@ -67,23 +70,39 @@ int main() {
 		srand(time(NULL)); 
 		playermove(&player);
 		update_all_fish(&pool);
+		collision_npc(&pool);
+
+
 		BeginDrawing();            // 开始绘制
 		ClearBackground(BLACK);    // 清除上一帧
 		
+
+
 		if (player.v_xy.x > 0)
 		{
-			DrawTextureEx(fish_texture2, player.xy, 0, 0.08, WHITE);
+			if (runingtime % 10<5)
+				DrawTextureEx(fish_texture2[0], player.xy, 0, player.size / 32.0, WHITE);
+			else DrawTextureEx(fish_texture2[1], player.xy, 0, player.size / 32.0, WHITE);
 		}
 		else {
-			DrawTextureEx(fish_texture, player.xy, 0, 0.08, WHITE);
+			if (runingtime % 10<5)
+			DrawTextureEx(fish_texture[0], player.xy, 0, player.size / 32.0, WHITE);
+			else DrawTextureEx(fish_texture[1], player.xy, 0, player.size / 32.0, WHITE);
 		}
 		
-		DrawCircle(player.xy.x+player.size/0.7, player.xy.y+ player.size / 1, player.size, RED);
+		//DrawCircle(player.xy.x+player.size/0.7, player.xy.y+ player.size / 1, player.size, RED);
 		//渲染所有NPC鱼
 		for (int i = 0; i < MAX_fish; i++) {
 			if (pool.used[i]) {
-					switch (fish_texture2, pool.fishnpc[i].fish.kinds){
-					case 1:DrawTextureEx(fish_texture2, pool.fishnpc[i].fish.xy, 0, 0.08, WHITE);
+				switch (fish_texture2, pool.fishnpc[i].fish.kinds) {
+				case 1:if (pool.fishnpc[i].fish.v_xy.x > 0){
+					if (runingtime % 10<5)DrawTextureEx(fish_texture2[0], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / 32.0, WHITE);
+					  else DrawTextureEx(fish_texture2[1], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / 32.0, WHITE);
+				}else {
+					if (runingtime % 10<5)
+						DrawTextureEx(fish_texture[0], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / 32.0, WHITE);
+					else DrawTextureEx(fish_texture[1], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / 32.0, WHITE);
+				}
 						break;
 
 				}
@@ -234,7 +253,7 @@ fish_NPC* create_npcfish(fishPool* pool,float x,float y ,int kind) {
 			newFish->fish.v_xy.x = (rand() % 7) - 2;
 			newFish->fish.v_xy.y = (rand() % 7) - 2;
 			newFish->fish.size = 20 + rand() % 30;
-			newFish->fish.a = 1.5;
+			newFish->fish.a = 1;
 			newFish->fish.kinds = kind;
 			newFish->fish.image_status = kind;
 			for(int i=0;i<numberofaim;i++){
@@ -254,7 +273,7 @@ fish_NPC* create_npcfish(fishPool* pool,float x,float y ,int kind) {
 }
 
 Vector2 get_legal_point(void) {
-	srand(time(NULL));
+	
 	Vector2 point;
 	if(rand()%2==0)
 		point.x = rand() %100 -100;
@@ -263,4 +282,43 @@ Vector2 get_legal_point(void) {
 	point.y = rand() % screen_length_y;
 
 	return point;
+}
+void collision_npc(fishPool* pool) {
+	for (int i = 0; i < MAX_fish; i++) {
+		if (pool->used[i]) {
+			for (int j = i + 1; j < MAX_fish; j++) {
+				if (pool->used[j]) {
+					if (fabs(pool->fishnpc[i].fish.xy.x + pool->fishnpc[i].fish.xy.y - pool->fishnpc[j].fish.xy.x - pool->fishnpc[j].fish.xy.y) < pool->fishnpc[i].fish.size + pool->fishnpc[j].fish.size) {
+						if (CheckCollisionCircles(pool->fishnpc[i].fish.xy, pool->fishnpc[i].fish.size, pool->fishnpc[j].fish.xy, pool->fishnpc[j].fish.size)) {
+							if (pool->fishnpc[i].fish.size > pool->fishnpc[j].fish.size) {
+								release_fish(pool, &pool->fishnpc[j]);
+								pool->fishnpc[i].fish.size += sqrt(pool->fishnpc[j].fish.size)*0.2;//大鱼吃掉小鱼size增加1
+								//速度没写
+							}
+							else {
+								release_fish(pool, &pool->fishnpc[i]);
+								pool->fishnpc[j].fish.size += sqrt(pool->fishnpc[i].fish.size) * 0.2;//大鱼吃掉小鱼size增加1
+								//速度没写
+							}
+						}
+					}
+
+				}
+			}
+			if (fabs(pool->fishnpc[i].fish.xy.x + pool->fishnpc[i].fish.xy.y - player.xy.x - player.xy.y) < pool->fishnpc[i].fish.size + player.size) {
+				if (CheckCollisionCircles(pool->fishnpc[i].fish.xy, pool->fishnpc[i].fish.size, player.xy, player.size)) {
+					if (pool->fishnpc[i].fish.size > player.size) {
+						running = 3; //玩家死亡
+					}
+					else {
+						release_fish(pool, &pool->fishnpc[i]);
+						player.size += sqrt(pool->fishnpc[i].fish.size) * 0.2;//player吃掉小鱼size增加1
+						//速度没写
+					}
+				}
+			}
+
+		}
+	}
+
 }
