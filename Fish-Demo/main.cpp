@@ -19,7 +19,7 @@ typedef struct fish {
 	double size;//圆的半径
 	int image_status;
 	int lizixiaoguo;
-	int kinds;//0是玩家，
+	int kinds;//0是玩家，1小丑鱼，2是河豚
 }fish;
 
 typedef struct fish_NPC {
@@ -56,17 +56,17 @@ int main() {
 
 
 	InitWindow(screen_length_x, screen_length_y, "fish game");
-	Texture fish_texture[2] = { LoadTexture("../img/小丑鱼 左向 模糊.png"),LoadTexture("../img/小丑鱼 左向 清晰.png") }, fish_texture2[2] = {LoadTexture("../img/小丑鱼 右向 模糊.png"),LoadTexture("../img/小丑鱼 右向 清晰.png")};
-
-
+	Texture xiaocouyu_texture[2] = { LoadTexture("../img/小丑鱼 左向 模糊.png"),LoadTexture("../img/小丑鱼 左向 清晰.png") }, xiaocouyu_texture2[2] = {LoadTexture("../img/小丑鱼 右向 模糊.png"),LoadTexture("../img/小丑鱼 右向 清晰.png")};
+	Texture hetun_texture[2] = { LoadTexture("../img/河豚 左向.png"),LoadTexture("../img/河豚 右向.png") };
+	Texture jianyu_texture[2] = { LoadTexture("../img/剑鱼 左向.png"),LoadTexture("../img/剑鱼 右向.png") };
 	SetWindowState(FLAG_VSYNC_HINT);
 	fishPool pool;
 	init_fish_pool(&pool);
 
-
+	//**************************************************************主循环********************************************************************//
 	while (!WindowShouldClose()) {
 		Vector2 randpoint = get_legal_point();
-		if(runingtime%39==0)create_npcfish(&pool, randpoint.x,randpoint.y, 1);
+		if(runingtime%39==0)create_npcfish(&pool, randpoint.x,randpoint.y, 3);
 		srand(time(NULL)); 
 		playermove(&player);
 		update_all_fish(&pool);
@@ -81,29 +81,55 @@ int main() {
 		if (player.v_xy.x > 0)
 		{
 			if (runingtime % 10<5)
-				DrawTextureEx(fish_texture2[0], player.xy, 0, player.size / 32.0, WHITE);
-			else DrawTextureEx(fish_texture2[1], player.xy, 0, player.size / 32.0, WHITE);
+				DrawTextureEx(xiaocouyu_texture2[0], player.xy, 0, player.size / 32.0, WHITE);
+			else DrawTextureEx(xiaocouyu_texture2[1], player.xy, 0, player.size / 32.0, WHITE);
 		}
 		else {
 			if (runingtime % 10<5)
-			DrawTextureEx(fish_texture[0], player.xy, 0, player.size / 32.0, WHITE);
-			else DrawTextureEx(fish_texture[1], player.xy, 0, player.size / 32.0, WHITE);
+			DrawTextureEx(xiaocouyu_texture[0], player.xy, 0, player.size / 32.0, WHITE);
+			else DrawTextureEx(xiaocouyu_texture[1], player.xy, 0, player.size / 32.0, WHITE);
 		}
 		
 		//DrawCircle(player.xy.x+player.size/0.7, player.xy.y+ player.size / 1, player.size, RED);
 		//渲染所有NPC鱼
 		for (int i = 0; i < MAX_fish; i++) {
 			if (pool.used[i]) {
-				switch (fish_texture2, pool.fishnpc[i].fish.kinds) {
+				switch (xiaocouyu_texture2, pool.fishnpc[i].fish.kinds) {
 				case 1:if (pool.fishnpc[i].fish.v_xy.x > 0){
-					if (runingtime % 10<5)DrawTextureEx(fish_texture2[0], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / 32.0, WHITE);
-					  else DrawTextureEx(fish_texture2[1], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / 32.0, WHITE);
+					if (runingtime % 10<5)DrawTextureEx(xiaocouyu_texture2[0], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / 32.0, WHITE);
+					  else DrawTextureEx(xiaocouyu_texture2[1], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / 32.0, WHITE);
 				}else {
 					if (runingtime % 10<5)
-						DrawTextureEx(fish_texture[0], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / 32.0, WHITE);
-					else DrawTextureEx(fish_texture[1], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / 32.0, WHITE);
+						DrawTextureEx(xiaocouyu_texture[0], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / 32.0, WHITE);
+					else DrawTextureEx(xiaocouyu_texture[1], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / 32.0, WHITE);
 				}
 						break;
+				case 2:if (pool.fishnpc[i].fish.v_xy.x > 0) {
+					DrawTextureEx(hetun_texture[1], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / 28.0, WHITE);
+				}else{ DrawTextureEx(hetun_texture[0], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / 28.0, WHITE); }
+					/*if (runingtime % 10 < 5)DrawTextureEx(xiaocouyu_texture2[0], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / 32.0, WHITE);
+					else DrawTextureEx(xiaocouyu_texture2[1], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / 32.0, WHITE);
+				}
+					  else {
+					if (runingtime % 10 < 5)
+						DrawTextureEx(xiaocouyu_texture[0], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / 32.0, WHITE);
+					else DrawTextureEx(xiaocouyu_texture[1], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / 32.0, WHITE);
+				}*/
+					  break;
+				case 3:if (pool.fishnpc[i].fish.v_xy.x > 0) {
+					DrawTextureEx(jianyu_texture[1], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / 28.0, WHITE);
+				}
+					  else { DrawTextureEx(jianyu_texture[0], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / 28.0, WHITE); }
+					  /*if (runingtime % 10 < 5)DrawTextureEx(xiaocouyu_texture2[0], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / 32.0, WHITE);
+					  else DrawTextureEx(xiaocouyu_texture2[1], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / 32.0, WHITE);
+				  }
+						else {
+					  if (runingtime % 10 < 5)
+						  DrawTextureEx(xiaocouyu_texture[0], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / 32.0, WHITE);
+					  else DrawTextureEx(xiaocouyu_texture[1], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / 32.0, WHITE);
+				  }*/
+					  break;
+
 
 				}
 			}
@@ -262,6 +288,37 @@ fish_NPC* create_npcfish(fishPool* pool,float x,float y ,int kind) {
 			}
 			newFish->aim[numberofaim].x = max(100*rand() % screen_length_x,3000);
 			newFish->aim[numberofaim].y = max(100*rand() % screen_length_y,2000);
+		}
+			  break;
+		case 2: {
+			newFish->fish.v_xy.x = (rand() % 7) - 2;
+			newFish->fish.v_xy.y = (rand() % 7) - 2;
+			newFish->fish.size = 15 + rand() % 25;
+			newFish->fish.a = 0.6;
+			newFish->fish.kinds = kind;
+			newFish->fish.image_status = kind;
+			for (int i = 0; i < numberofaim; i++) {
+				newFish->aim[i].x = rand() % screen_length_x * 1.2;
+				newFish->aim[i].y = rand() % screen_length_y * 1.2;
+			}
+			newFish->aim[numberofaim].x = max(100 * rand() % screen_length_x, 3000);
+			newFish->aim[numberofaim].y = max(100 * rand() % screen_length_y, 2000);
+		}
+			  break;
+		case 3: {
+			newFish->fish.v_xy.x = (rand() % 10) - 4;
+			newFish->fish.v_xy.y = (rand() % 10) - 4;
+			newFish->fish.size = 35 + rand() % 50;
+			newFish->fish.a = 3;
+			newFish->fish.kinds = kind;
+			newFish->fish.image_status = kind;
+			for (int i = 0; i < numberofaim; i++) {
+				newFish->aim[i].x = rand() % screen_length_x * 1.2;
+				newFish->aim[i].y = rand() % screen_length_y * 0.1+newFish->fish.xy.y;
+				
+			}
+			newFish->aim[numberofaim].x = max(100 * rand() % screen_length_x, 3000);
+			newFish->aim[numberofaim].y = max(100 * rand() % screen_length_y, 2000);
 		}
 			  break;
 		default:
