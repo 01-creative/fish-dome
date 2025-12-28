@@ -701,9 +701,8 @@ void draw_background1(void)
 	DrawTexturePro(bg4, src4, bg4x, origin, 0, WHITE);
 	DrawTexturePro(bg4, src4, bg4y , origin, 0, WHITE);
 
-
-void change_difficult(fishPool* pool)
-{
+	}
+void change_difficult(fishPool* pool){
 	int possibility[5] = { 20,31,25,17,13 };
 	static int size_threshold[] = {
 		45,  // jieduan 0 -> 1
