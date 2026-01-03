@@ -54,11 +54,7 @@ float bg2_x = 0;
 float bg3_x = 0;
 float bg4_x = 0;//背景偏移量
 
-
-
-static int slow_timer = 0, super_slow_timer = 0;		float fade = 1.0f;;
-
-
+int slow_timer = 0, super_slow_timer = 0,mutation=0, ate_mutant_fish=0;float fade = 1.0f;
 
 void playermove(fish* player);
 void npc_move(fish_NPC* npc);
@@ -74,29 +70,64 @@ void change_difficult(fishPool* pool);
 void draw_depth_filter(void);
 void draw_player_glow(void);
 void draw_fish_glow(fishPool* pool);
-
+void DrawFishAutoFlip(
+	Texture2D tex_left,
+	Vector2 pos,
+	float size,
+	float baseSize,
+	Color tint,
+	float vx
+);
+void playermutation(void);
 
 int main() {
-
-
-
-
-
 	InitWindow(screen_length_x, screen_length_y, "fish game");
-	Texture player_txture[2] = { LoadTexture("../img/fish/玩家 左向 模糊.png"),LoadTexture("../img/fish/玩家 左向 清晰.png") }, player_txture2[2] = { LoadTexture("../img/fish/玩家 右向 模糊.png"),LoadTexture("../img/fish/玩家 右向 清晰.png") };
-	Texture player_txture_huidu[2] = { LoadTexture("../img/fish/玩家 灰度 左向.png"),LoadTexture("../img/fish/玩家 灰度 右向.png") };
-	Texture xiaochouyu_texture[2] = { LoadTexture("../img/fish/小丑鱼 左向.png"),LoadTexture("../img/fish/小丑鱼 右向.png") };
-	Texture hetun_texture[2] = { LoadTexture("../img/fish/河豚 左向.png"),LoadTexture("../img/fish/河豚 右向.png") };
-	Texture hetun_texture2[2] = { LoadTexture("../img/fish/河豚 鼓起 左向.png"),LoadTexture("../img/fish/河豚 鼓起 右向.png") };
-	Texture jianyu_texture[2] = { LoadTexture("../img/fish/剑鱼 左向.png"),LoadTexture("../img/fish/剑鱼 右向.png") };
-	Texture jianyu_texture_b1[2] = { LoadTexture("../img/fish/剑鱼 变异1 左向.png"),LoadTexture("../img/fish/剑鱼 变异1 右向.png") };
-	Texture jianyu_texture_b2[2] = { LoadTexture("../img/fish/剑鱼 变异2 左向.png"),LoadTexture("../img/fish/剑鱼 变异2 右向.png") };
-	Texture shayu_texture[2] = { LoadTexture("../img/fish/鲨鱼 左向.png"),LoadTexture("../img/fish/鲨鱼 右向.png") };
-	Texture shayu_texture_b1[2] = { LoadTexture("../img/fish/鲨鱼 变异1 左向.png"),LoadTexture("../img/fish/鲨鱼 变异1 右向.png") };
-	Texture shayu_texture_b2[2] = { LoadTexture("../img/fish/鲨鱼 变异2 左向.png"),LoadTexture("../img/fish/鲨鱼 变异2 右向.png") };
-	Texture hetun_texture_b1[2] = { LoadTexture("../img/fish/河豚 变异1 左向.png"),LoadTexture("../img/fish/河豚 变异1 右向.png") };
-	Texture hetun_texture2_b1[2] = { LoadTexture("../img/fish/河豚 鼓起 变异1 左向.png"),LoadTexture("../img/fish/河豚 鼓起 变异1 右向.png") };
-	
+
+	// ================= 玩家贴图 =================
+	Texture player_tex[2] = {
+		LoadTexture("../img/fish/玩家 左向 模糊.png"),
+		LoadTexture("../img/fish/玩家 左向 清晰.png")
+	};
+	Texture player_gray_left =
+		LoadTexture("../img/fish/玩家 灰度 左向.png");
+	Texture player_tex_by[6]={
+		LoadTexture("../img/fish/玩家 变异1 左向.png"),
+		LoadTexture("../img/fish/玩家 变异2 左向.png"),
+		LoadTexture("../img/fish/玩家 变异3 左向.png"),
+		LoadTexture("../img/fish/玩家 变异4 左向.png"),
+		LoadTexture("../img/fish/玩家 变异5 左向.png"),
+		LoadTexture("../img/fish/玩家 变异6 左向.png")
+	};
+
+	// ================= NPC 鱼贴图 =================
+	Texture xiaochouyu_left =
+		LoadTexture("../img/fish/小丑鱼 左向.png");
+
+	Texture hetun_left =
+		LoadTexture("../img/fish/河豚 左向.png");
+	Texture hetun_puffed_left =
+		LoadTexture("../img/fish/河豚 鼓起 左向.png");
+
+	Texture jianyu_left =
+		LoadTexture("../img/fish/剑鱼 左向.png");
+	Texture jianyu_b1_left =
+		LoadTexture("../img/fish/剑鱼 变异1 左向.png");
+	Texture jianyu_b2_left =
+		LoadTexture("../img/fish/剑鱼 变异2 左向.png");
+
+	Texture shayu_left =
+		LoadTexture("../img/fish/鲨鱼 左向.png");
+	Texture shayu_b1_left =
+		LoadTexture("../img/fish/鲨鱼 变异1 左向.png");
+	Texture shayu_b2_left =
+		LoadTexture("../img/fish/鲨鱼 变异2 左向.png");
+
+	Texture hetun_b1_left =
+		LoadTexture("../img/fish/河豚 变异1 左向.png");
+	Texture hetun_puffed_b1_left =
+		LoadTexture("../img/fish/河豚 鼓起 变异1 左向.png");
+	Texture jitan =
+		LoadTexture("../img/other/祭坛.png");
 	SetWindowState(FLAG_VSYNC_HINT);
 	fishPool pool;
 	init_fish_pool(&pool);
@@ -108,6 +139,7 @@ int main() {
 
 		change_difficult(&pool);
 		playermove(&player);
+		playermutation();
 		update_all_fish(&pool);
 		collision_npc(&pool);
 
@@ -139,101 +171,98 @@ int main() {
 			Color green = { 180, 255, 180, 255 };
 			stateTint = green;  // 淡绿色
 		}
-	    Color playerTint,huiduTint;
-		playerTint.r = (unsigned char)(stateTint.r * brightness);
-		playerTint.g = (unsigned char)(stateTint.g * brightness);
-		playerTint.b = (unsigned char)(stateTint.b * brightness);
-		playerTint.a = 255*fade;
-		huiduTint.r = (unsigned char)(255* brightness);
-		huiduTint.g = (unsigned char)(255* brightness);
-		huiduTint.b = (unsigned char)(255* brightness);
-		huiduTint.a = 255;
-		if (player.v_xy.x > 0)
-		{
-			DrawTextureEx(player_txture_huidu[1], player.xy, 0, player.size / (32.0 * sizetimes), huiduTint);
-		}
-		else {
-			DrawTextureEx(player_txture_huidu[0], player.xy, 0, player.size / (32.0 * sizetimes), huiduTint);
-		}
+		Color playerTint = {
+			(unsigned char)(stateTint.r * brightness),
+			(unsigned char)(stateTint.g * brightness),
+			(unsigned char)(stateTint.b * brightness),
+			(unsigned char)(255 * fade)
+		};
+		Color grayTint = { v, v, v, 255 };
+		// ================= 玩家灰度底 =================
+		DrawFishAutoFlip(
+			player_gray_left,
+			player.xy,
+			player.size,
+			32.0f,
+			grayTint,
+			player.v_xy.x
+		);
 
-		if (player.v_xy.x > 0)
-		{
-			if (runingtime % 10 < 5)
-				DrawTextureEx(player_txture2[0], player.xy, 0, player.size / (32.0 * sizetimes), playerTint);
-			else DrawTextureEx(player_txture2[1], player.xy, 0, player.size / (32.0 * sizetimes), playerTint);
+		// ================= 玩家本体动画 =================
+		if(mutation==0){
+			int frame = (runingtime % 10 < 5) ? 0 : 1;
+			DrawFishAutoFlip(
+				player_tex[frame],
+				player.xy,
+				player.size,
+				32.0f,
+				playerTint,
+				player.v_xy.x
+			);
 		}
 		else {
-			if (runingtime % 10 < 5)
-				DrawTextureEx(player_txture[0], player.xy, 0, player.size / (32.0 * sizetimes), playerTint);
-			else DrawTextureEx(player_txture[1], player.xy, 0, player.size / (32.0 * sizetimes), playerTint);
+			DrawFishAutoFlip(
+				player_tex_by[mutation-1],
+				player.xy,
+				player.size,
+				32.0f,
+				playerTint,
+				player.v_xy.x
+			);
 		}
 		//玩家渲染结束
 
 		//渲染所有NPC鱼
 		for (int i = 0; i < MAX_fish; i++) {
-			if (pool.used[i]) {
-				switch (pool.fishnpc[i].fish.kinds) {
-				case 1:if (pool.fishnpc[i].fish.v_xy.x > 0) {
-					DrawTextureEx(xiaochouyu_texture[1], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / (24.0 * sizetimes), fishTint);
-				}
-					  else { DrawTextureEx(xiaochouyu_texture[0], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / (24.0 * sizetimes), fishTint); }
+			if (!pool.used[i]) continue;
 
-					  break;
-				case 2:if (pool.fishnpc[i].fish.v_xy.x > 0) {
-					if (pool.fishnpc[i].fish.image_status == 2)DrawTextureEx(hetun_texture2[1], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / (28.0 * sizetimes), fishTint);
-					else DrawTextureEx(hetun_texture[1], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / (28.0 * sizetimes), fishTint);
-				}
-					  else {
-					if (pool.fishnpc[i].fish.image_status == 2)DrawTextureEx(hetun_texture2[0], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / (28.0 * sizetimes), fishTint);
-					else DrawTextureEx(hetun_texture[0], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / (28.0 * sizetimes), fishTint);}
-					  break;
-				case 3:if (pool.fishnpc[i].fish.v_xy.x > 0) {
-					DrawTextureEx(jianyu_texture[1], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / (18.0 * sizetimes), fishTint);
-				}else { DrawTextureEx(jianyu_texture[0], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / (18.0 * sizetimes), fishTint); }
+			fish* f = &pool.fishnpc[i].fish;
+
+			switch (f->kinds) {
+			case 1:
+				DrawFishAutoFlip(xiaochouyu_left, f->xy, f->size, 24.0f, fishTint, f->v_xy.x);
 				break;
-				case 4:if (pool.fishnpc[i].fish.v_xy.x > 0) {
-					DrawTextureEx(shayu_texture[1], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / (20.0 * sizetimes), fishTint);
-				}else { DrawTextureEx(shayu_texture[0], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / (20.0 * sizetimes), fishTint); }
+
+			case 2:
+				DrawFishAutoFlip(
+					f->image_status == 2 ? hetun_puffed_left : hetun_left,
+					f->xy, f->size, 28.0f, fishTint, f->v_xy.x
+				);
 				break;
-				case 5:if (pool.fishnpc[i].fish.v_xy.x > 0) {
-					DrawTextureEx(jianyu_texture_b1[1], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / (18.0 * sizetimes), fishTint);
-				}
-					  else { DrawTextureEx(jianyu_texture_b1[0], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / (18.0 * sizetimes), fishTint); }
-					  break;
-				case 6:if (pool.fishnpc[i].fish.v_xy.x > 0) {
-					DrawTextureEx(jianyu_texture_b2[1], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / (18.0 * sizetimes), fishTint);
-				}
-					  else { DrawTextureEx(jianyu_texture_b2[0], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / (18.0 * sizetimes), fishTint); }
-					  break;
-				case 7:if (pool.fishnpc[i].fish.v_xy.x > 0) {
-					DrawTextureEx(shayu_texture_b1[1], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / (20.0 * sizetimes), fishTint);
-				}
-					  else { DrawTextureEx(shayu_texture_b1[0], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / (20.0 * sizetimes), fishTint); }
-					  break;
-				case 8:if (pool.fishnpc[i].fish.v_xy.x > 0) {
-					DrawTextureEx(shayu_texture_b2[1], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / (20.0 * sizetimes), fishTint);
-				}
-					  else { DrawTextureEx(shayu_texture_b2[0], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / (20.0 * sizetimes), fishTint); }
-					  break;
-				case 9:if (pool.fishnpc[i].fish.v_xy.x > 0) {
-					if (pool.fishnpc[i].fish.image_status == 2)DrawTextureEx(hetun_texture2_b1[1], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / (28.0 * sizetimes), fishTint);
-					else DrawTextureEx(hetun_texture_b1[1], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / (28.0 * sizetimes), fishTint);
-				}
-					  else {
-					if (pool.fishnpc[i].fish.image_status == 2)DrawTextureEx(hetun_texture2_b1[0], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / (28.0 * sizetimes), fishTint);
-					else DrawTextureEx(hetun_texture_b1[0], pool.fishnpc[i].fish.xy, 0, pool.fishnpc[i].fish.size / (28.0 * sizetimes), fishTint);
-				}
-					  break;
 
+			case 3:
+				DrawFishAutoFlip(jianyu_left, f->xy, f->size, 18.0f, fishTint, f->v_xy.x);
+				break;
 
+			case 4:
+				DrawFishAutoFlip(shayu_left, f->xy, f->size, 20.0f, fishTint, f->v_xy.x);
+				break;
 
+			case 5:
+				DrawFishAutoFlip(jianyu_b1_left, f->xy, f->size, 18.0f, fishTint, f->v_xy.x);
+				break;
 
+			case 6:
+				DrawFishAutoFlip(jianyu_b2_left, f->xy, f->size, 18.0f, fishTint, f->v_xy.x);
+				break;
 
+			case 7:
+				DrawFishAutoFlip(shayu_b1_left, f->xy, f->size, 20.0f, fishTint, f->v_xy.x);
+				break;
 
+			case 8:
+				DrawFishAutoFlip(shayu_b2_left, f->xy, f->size, 20.0f, fishTint, f->v_xy.x);
+				break;
 
+			case 9:
+				DrawFishAutoFlip(
+					f->image_status == 2 ? hetun_puffed_b1_left : hetun_b1_left,
+					f->xy, f->size, 28.0f, fishTint, f->v_xy.x
+				);
+				break;
 
-				}
 			}
+
 
 			if (IsKeyDown(KEY_Q)) {//调试用代码，显示碰撞箱与大小
 				Vector2 cj;
@@ -273,23 +302,26 @@ int main() {
 					WHITE
 				);
 			}
+		
 		}
 		//NPC鱼渲染结束
 
 		static int size_threshold[] = {
 			55,  // jieduan 0 -> 1
-			85,  // 1 -> 2
-			120,  // 2 -> 3
-			200,  // 3 -> 4
-			280   // 4 -> 5
+			95,  // 1 -> 2
+			140,  // 2 -> 3
+			230,  // 3 -> 4
+			320   // 4 -> 5
 		};
 		if (runingtime % 10 == 0)printf("size:%.2f+threat:%.2f 阶段：%d 下阶段门槛：%lf time:%d san:%.3f fade:%.3f\n", player.size, player.threatsize,jieduan, ((size_threshold[jieduan] * sizetimes) * san / 100), runingtime, san,fade);
 		//调试用代码，显示玩家大小和当前阶段
-		//光线效果
-
-
-
-
+		if (jieduan == 5) {
+			static float toumingdu = 0;
+			if(toumingdu<1.0f)toumingdu = min(toumingdu += 0.001, 1.0f);
+			Color a = { 0,0,0,toumingdu * 255 };
+			DrawTexture(jitan, screen_length_x - jitan.width / 2, screen_length_y - jitan.height, a);
+		}
+	
 
 
 		runingtime++; san += 0.0001; san -= 0.001*jieduan;
@@ -306,11 +338,52 @@ int main() {
 		}*/
 	}
 
-
-
-
 	return 0;
 }
+
+
+void DrawFishAutoFlip(
+	Texture2D tex_left,
+	Vector2 pos,
+	float size,
+	float baseSize,
+	Color tint,
+	float vx
+) {
+	Rectangle src = {
+		0,
+		0,
+		(float)tex_left.width,
+		(float)tex_left.height
+	};
+
+	if (vx > 0) { // 向右游 → 翻转
+		src.x = tex_left.width;
+		src.width = -src.width;
+	}
+
+	float scale = size / (baseSize * sizetimes);
+
+	Rectangle dst = {
+		pos.x,
+		pos.y,
+		tex_left.width * scale,
+		tex_left.height * scale
+	};
+	Vector2 origin = {
+		0,
+		0
+	};
+	DrawTexturePro(
+		tex_left,
+		src,
+		dst,
+		origin,
+		0.0f,
+		tint
+	);
+}
+
 
 
 
@@ -326,8 +399,8 @@ void playermove(fish* player) {
 	fade = max(fade, 0);
 	if(super_slow_timer>0){
 		super_slow_timer--;
-		init_a -= 0.002;
 		if(super_slow_timer==0){
+			init_a *= 0.85;
 			player->a = init_a;
 		}
 	}
@@ -518,8 +591,8 @@ fish_NPC* create_npcfish(fishPool* pool, float x, float y, int kind) {
 
 	65,  // kind 5
 	120,  // kind 6
-	90,  // kind 7
-	135,  // kind 8
+	100,  // kind 7
+	145,  // kind 8
 	45	// kind 9
 	};
 
@@ -528,11 +601,11 @@ fish_NPC* create_npcfish(fishPool* pool, float x, float y, int kind) {
 		60,
 		50,
 		90,
-		120,
-		125,//剑鱼变异1
+		130,
+		135,//剑鱼变异1
 		180,//剑鱼变异2
-		140,//鲨鱼变异1
-		200,//鲨鱼变异2
+		160,//鲨鱼变异1
+		220,//鲨鱼变异2
 		70
 	};
 
@@ -544,16 +617,16 @@ fish_NPC* create_npcfish(fishPool* pool, float x, float y, int kind) {
 	/*double change = difficult * sqrt(player.size * (jieduan + 1)) * 0.15-0.05;*/
 		// 危险鱼尺寸解锁
 	static int danger_min_size[] = {
-		43, 57, 79, 115, 129, 150
+		53, 67, 89, 135, 149, 180
 	};
 
 	static int danger_max_size[] = {
-		64, 93,114, 200, 200, 200
+		70, 110,150, 220, 220, 230
 	};
 
 
 	static int danger_rate[] = {
-		15, 20, 25, 30, 30, 50
+		20, 30, 25, 35, 40, 50
 	};
 	int is_danger = (rand() % 100) < danger_rate[jieduan], threatsize0 = 1;
 	if (!is_danger)
@@ -569,7 +642,7 @@ fish_NPC* create_npcfish(fishPool* pool, float x, float y, int kind) {
 		int min_size = danger_min_size[jieduan] * difficult;
 		int max_size = danger_max_size[jieduan] * difficult;
 		threatsize0 = GetRandomValue(min_size, min(max_size, player.threatsize * 1.2));
-		int must_be_bigger = (int)(player.threatsize * 1.08f);
+		int must_be_bigger = (int)(player.threatsize * 1.2f);
 		if (threatsize0 < must_be_bigger)
 			threatsize0 = must_be_bigger;
 	}while (kind > 0)
@@ -632,7 +705,7 @@ fish_NPC* create_npcfish(fishPool* pool, float x, float y, int kind) {
 		}
 	} break;
 	case 5: {
-		newFish->fish.a = 5* difficult;
+		newFish->fish.a = 4* difficult;
 		newFish->fish.image_status = kind;
 		for (int i = 0; i < numberofaim; i++) {
 			newFish->aim[i].x = rand() % screen_length_x * 1.1;
@@ -640,7 +713,7 @@ fish_NPC* create_npcfish(fishPool* pool, float x, float y, int kind) {
 		}
 	} break;
 	case 6: {
-		newFish->fish.a = 6.5f * difficult;
+		newFish->fish.a = 5.5f * difficult;
 		newFish->fish.image_status = kind;
 		for (int i = 0; i < numberofaim; i++) {
 			newFish->aim[i].x = rand() % screen_length_x * 1.2;
@@ -797,28 +870,34 @@ void collision_npc(fishPool* pool) {
 						Vector2 target{ pool->fishnpc[i].fish.xy.x - player.xy.x,pool->fishnpc[i].fish.xy.y - player.xy.y };
 						player.v_xy.x += 3 * player.a * target.x / sqrt((target.x) * (target.x) + (target.y) * (target.y));
 						player.v_xy.y += 3 * player.a * target.y / sqrt((target.x) * (target.x) + (target.y) * (target.y));
-						if (pool->fishnpc[i].fish.kinds == 2 &&
-							pool->fishnpc[i].fish.image_status == 2) {
-							player.threatsize -= 0.5 * difficult;
-							// 刷新减速
-							san -= 0.5;
-							player.a *= 0.6f;
-							slow_timer = 100 * difficult;
+						if (pool->fishnpc[i].fish.kinds == 2) {
+							if (pool->fishnpc[i].fish.image_status == 2) {
+								player.threatsize -= 1.0 * difficult;
+								// 刷新减速
+								san -= 0.5;
+								player.a *= 0.6f;
+								slow_timer = 100 * difficult;
+							}
+							else { san+=0.5*jieduan+0.5; }
 						}
-						if (pool->fishnpc[i].fish.kinds == 9 &&
-							pool->fishnpc[i].fish.image_status == 2) {
-							player.threatsize -= 3.5 * difficult;
-							// 刷新减速
-							san -= 2.5;
-							player.a *= 0.3f;
-							super_slow_timer = 120 * difficult;
-							fade -= 0.15;
+						if (pool->fishnpc[i].fish.kinds == 9)
+						{
 							static int eat_number = 0;
-							eat_number++;
+							if (pool->fishnpc[i].fish.image_status == 2) {
+								player.threatsize -= 3.5 * difficult;
+								// 刷新减速
+								san -= 2.5;
+								player.a *= 0.3f;
+								super_slow_timer = 120 * difficult;
+								fade -= 0.15;
+								eat_number++;
+							}
+							else { san += 3; }
 							if (eat_number >= 3) {
 								fade = 0.6;//续命
 							}
 						}
+						if (pool->fishnpc[i].fish.kinds >= 5)ate_mutant_fish++;
 					}
 				}
 			}
@@ -950,10 +1029,10 @@ void change_difficult(fishPool* pool) {
 	int possibility[5] = { 23,22,25,28,30 };
 	static int size_threshold[] = {
 		55,  // jieduan 0 -> 1
-		85,  // 1 -> 2
-		120,  // 2 -> 3
-		200,  // 3 -> 4
-		280   // 4 -> 5
+		95,  // 1 -> 2
+		140,  // 2 -> 3
+		230,  // 3 -> 4
+		320   // 4 -> 5
 	};
 	if (jieduan < 5 && player.threatsize >((size_threshold[jieduan] * sizetimes) * san / 100))
 
@@ -962,9 +1041,9 @@ void change_difficult(fishPool* pool) {
 	}
 	static int list[5][10] = {
 		{1,1,1,1,1,1,2,2,2,3},
-		{1,1,1,1,2,2,2,3,3,3},
+		{1,1,1,2,2,2,3,3,3,4},
 		{1,1,2,2,3,3,3,5,4,4},
-		{2,3,3,5,5,6,4,4,7,7},
+		{2,3,3,5,5,6,4,4,7,8},
 		{9,9,5,5,6,4,7,7,8,8}
 	};
 	Vector2 pos = get_legal_point(); int kinds = list[jieduan][rand() % 10];
@@ -1015,36 +1094,99 @@ void draw_depth_filter(void)
 	}
 
 }
-
-void draw_player_glow(void)
+void draw_player_glow()
 {
 	Vector2 ci;
 	ci.x = player.xy.x + player.size * 1.4f;
 	ci.y = player.xy.y + player.size * 1.3f;
 
 	float size = player.size;
+
 	float t = depthTrans.tone;
 	t = t * t;
+
 	float baseAlpha = t * 60.0f;
 
-	float pulse = sinf(GetTime() * 3.0f) * 0.3f + 0.8f;
+	/* ===== 呼吸控制：默认（mutation < 3） ===== */
+	float pulseFreq = 3.0f;
+	float pulseAmp = 0.3f;
+	float pulseBase = 0.8f;
+
+	/* ===== 阶段 3：异常开始，呼吸变弱 ===== */
+	if (mutation >= 3 && mutation < 5) {
+		pulseFreq = 3.5f;
+		pulseAmp = 0.4f;
+		pulseBase = 0.87f;
+	}
+
+	/* ===== 阶段 5：非生物感，几乎无呼吸 ===== */
+	if (mutation >= 5) {
+		pulseFreq =4.0f;
+		pulseAmp = 0.5f;
+		pulseBase = 0.95f;
+	}
+
+	float pulse = sinf(GetTime() * pulseFreq) * pulseAmp + pulseBase;
 	baseAlpha *= pulse;
 
 	Color c1, c2, c3;
 
-	c1.r = 180; c1.g = 220; c1.b = 255;
-	c1.a = (unsigned char)(baseAlpha * 0.6f);
+	/* ===== 颜色方案 ===== */
+	if (mutation < 3) {
+		/* 原始冷蓝 */
+		c1.r = 180; c1.g = 220; c1.b = 255;
+		c1.a = (unsigned char)(baseAlpha * 0.6f);
 
-	c2.r = 120; c2.g = 170; c2.b = 255;
-	c2.a = (unsigned char)(baseAlpha * 0.35f);
+		c2.r = 120; c2.g = 170; c2.b = 255;
+		c2.a = (unsigned char)(baseAlpha * 0.35f);
 
-	c3.r = 80; c3.g = 130; c3.b = 220;
-	c3.a = (unsigned char)(baseAlpha * 0.2f);
+		c3.r = 80;  c3.g = 130; c3.b = 220;
+		c3.a = (unsigned char)(baseAlpha * 0.2f);
+	}
+	else if (mutation < 5) {
+		/* 阶段 3：冷白偏青 */
+		c1.r = 200; c1.g = 230; c1.b = 255;
+		c1.a = (unsigned char)(baseAlpha * 0.65f);
 
-	DrawCircle(ci.x, ci.y, size * 1.0f, c1);
-	DrawCircle(ci.x, ci.y, size * 1.6f, c2);
-	DrawCircle(ci.x, ci.y, size * 2.4f, c3);
+		c2.r = 150; c2.g = 200; c2.b = 255;
+		c2.a = (unsigned char)(baseAlpha * 0.4f);
+
+		c3.r = 110; c3.g = 160; c3.b = 230;
+		c3.a = (unsigned char)(baseAlpha * 0.25f);
+	}
+	else {
+		/* 阶段 5：偏紫 */
+		c1.r = 210; c1.g = 170; c1.b = 255;
+		c1.a = (unsigned char)(baseAlpha * 0.7f);
+
+		c2.r = 170; c2.g = 130; c2.b = 230;
+		c2.a = (unsigned char)(baseAlpha * 0.45f);
+
+		c3.r = 120; c3.g = 90;  c3.b = 180;
+		c3.a = (unsigned char)(baseAlpha * 0.3f);
+	}
+
+	/* ===== 半径：非常克制的变化 ===== */
+	float r1 = size * 1.0f;
+	float r2 = size * 1.6f;
+	float r3 = size * 2.4f;
+
+	if (mutation >= 3 && mutation < 5) {
+		r2 *= 1.05f;
+		r3 *= 1.1f;
+	}
+
+	if (mutation >= 5) {
+		r2 *= 1.1f;
+		r3 *= 1.15f;
+	}
+
+	DrawCircle(ci.x, ci.y, r1, c1);
+	DrawCircle(ci.x, ci.y, r2, c2);
+	DrawCircle(ci.x, ci.y, r3, c3);
 }
+
+
 void draw_fish_glow(fishPool* pool)
 {
 	int i;
@@ -1134,7 +1276,37 @@ void draw_fish_glow(fishPool* pool)
 		DrawCircle(ci.x, ci.y, size * r3 * pulse, c3);
 	}
 }
+void playermutation(void) {
+	if (mutation ==0) {
+		if (jieduan >= 1 && san < 90)
+			mutation = 1;
+	}
 
+	if (mutation ==1) {
+		if ((jieduan >= 2 && san < 80)||san<70)
+			mutation = 2;
+	}
+
+	if (mutation ==2) {
+		if ((jieduan >= 3 || san < 60)&& ate_mutant_fish)
+			mutation = 3;
+	}
+
+	if (mutation ==3) {
+		if (jieduan >= 3 && san < 50)
+			mutation = 4;
+	}
+
+	if (mutation ==4) {
+		if (jieduan >= 4 && san < 35)
+			mutation = 5;
+	}
+
+	if (mutation ==5) {
+		if (jieduan >= 5 && san < 20)
+			mutation = 6;
+	}
+}
 
 
 
