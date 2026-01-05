@@ -141,8 +141,7 @@ int main() {
 	screen_length_y = 1152;
 
 	// 使用默认分辨率
-	game_resolution = 0;  // 默认800x600
-
+	game_resolution = 3; 
 	// 根据默认分辨率设置窗口大小
 	switch (game_resolution) {
 	case 0: screen_length_x = 800; screen_length_y = 600; break;
@@ -236,18 +235,10 @@ int main() {
 	srand(time(NULL));
 	//**************************************************************主循环********************************************************************//
 	while (!WindowShouldClose()) {
-		/*Vector2 randpoint = get_legal_point();
-		if(runingtime%17==0)create_npcfish(&pool, randpoint.x,randpoint.y, rand()%4+1);*/
 		if (IsKeyPressed(KEY_SPACE)) {
-			isPaused = !isPaused;  // 切换暂停状态
+			isPaused = !isPaused;
 		}
-
 		if (!isPaused) {
-			Vector2 randpoint = get_legal_point();
-			if (runingtime % 39 == 0)create_npcfish(&pool, randpoint.x, randpoint.y, rand() % 4 + 1);
-			srand(time(NULL));
-
-			update_all_fish(&pool);
 			UI_Update(&pool);
 			if (uiState == UI_DEAD && IsKeyPressed(KEY_ENTER)) {
 				uiState = UI_TITLE;
@@ -255,25 +246,20 @@ int main() {
 				goto start;
 			}
 		}
-
 		change_difficult(&pool);
 		playermove(&player);
 		playermutation();
 		update_all_fish(&pool);
 		collision_npc(&pool);
-
-
-		BeginDrawing();            // 开始绘制
-		ClearBackground(BLACK);    // 清除上一帧
-		if (uiState == 1) {//游戏进行中
+		BeginDrawing();          
+		ClearBackground(BLACK);   
+		if (uiState == 1) {
 			draw_background1();
-			//光照模拟
 			draw_depth_filter();
 			draw_player_glow();
 			draw_fish_glow(&pool);
 			static float toumingdu = 0;
 			if (jieduan == 5) {
-
 				if (toumingdu >= 0.95) {
 					if (check_jitan_sacrifice(jitan)) {
 
@@ -1679,8 +1665,6 @@ void UI_Update(fishPool* pool)
 		break;
 
 	case UI_PLAYING:
-		playermove(&player);
-		collision_npc(pool);
 		ui_score++;
 		if (running == 3)
 		{
