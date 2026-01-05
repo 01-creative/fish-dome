@@ -90,8 +90,8 @@ void DrawFishAutoFlip(
 	float vx
 );
 void playermutation(void);
-static float sign_point(Vector2 p1, Vector2 p2, Vector2 p3);
-static int point_in_triangle(Vector2 pt, Vector2 v1, Vector2 v2, Vector2 v3);
+//static float sign_point(Vector2 p1, Vector2 p2, Vector2 p3);
+//static int point_in_triangle(Vector2 pt, Vector2 v1, Vector2 v2, Vector2 v3);
 int check_jitan_sacrifice(Texture jitan);
 void UI_Update(void);
 void UI_Draw(void);
@@ -284,7 +284,14 @@ int main(void)
 				);
 			}
 			//玩家渲染结束
-
+			//提示词渲染
+			if(mutation>=3){
+				static int get_ablility = 0;
+				if (get_ablility < 100) {
+					get_ablility++;
+					DrawText("You feel stronger and better.(Double Tap Ability Unlocked)", screen_length_x / 2-300, screen_length_y-80, 20, YELLOW);
+				}
+			}
 			//渲染所有NPC鱼
 			for (int i = 0; i < MAX_fish; i++) {
 				if (!pool.used[i]) continue;
@@ -585,6 +592,7 @@ void playermove(fish* player) {
 		derta_vy *= 0.7071f;
 	}
 	if (mutation >= 3) {
+	
 		static int cooldown = 0;
 		static int keyPressCount[4] = { 0 };
 		static double lastPressTime[4] = { 0 };
@@ -598,12 +606,12 @@ void playermove(fish* player) {
 		if (keyIndex != -1 && !cooldown) {
 			if (currentTime - lastPressTime[keyIndex] < 0.3) {
 				switch (keyIndex) {
-				case 0: derta_vx += player->a * 10; break;
-				case 1: derta_vx -= player->a * 10; break;
-				case 2: derta_vy += player->a * 10; break;
-				case 3: derta_vy -= player->a * 10; break;
+				case 0: derta_vx += player->a * 12; break;
+				case 1: derta_vx -= player->a * 12; break;
+				case 2: derta_vy += player->a * 12; break;
+				case 3: derta_vy -= player->a * 12; break;
 				}
-				cooldown = 100;
+				cooldown = 120-10*mutation;
 				keyPressCount[keyIndex] = 0;
 			}
 			else {
@@ -1480,7 +1488,7 @@ void playermutation(void) {
 	}
 
 	if (mutation ==2) {
-		if ((jieduan >= 3 || san < 60)&& ate_mutant_fish)
+		if (((jieduan >= 3 || san < 60) && ate_mutant_fish)||san<30)
 			mutation = 3;
 	}
 
@@ -1499,148 +1507,144 @@ void playermutation(void) {
 			mutation = 6;
 	}
 }
-static float sign_point(Vector2 p1, Vector2 p2, Vector2 p3)
+//static float sign_point(Vector2 p1, Vector2 p2, Vector2 p3)
+//{
+//	return (p1.x - p3.x) * (p2.y - p3.y) -
+//		(p2.x - p3.x) * (p1.y - p3.y);
+//}
+//
+//static int point_in_triangle(Vector2 pt, Vector2 v1, Vector2 v2, Vector2 v3)
+//{
+//	float d1 = sign_point(pt, v1, v2);
+//	float d2 = sign_point(pt, v2, v3);
+//	float d3 = sign_point(pt, v3, v1);
+//
+//	int has_neg = (d1 < 0) || (d2 < 0) || (d3 < 0);
+//	int has_pos = (d1 > 0) || (d2 > 0) || (d3 > 0);
+//
+//	return !(has_neg && has_pos);
+//}
+//int check_jitan_guidance_and_sacrifice(Texture jitan)
+//{
+//	if (jieduan != 5) return 0;
+//	/* ===== 透明度（同步视觉） ===== */
+//	static float toumingdu = 0.0f;
+//	if (toumingdu < 1.0f)
+//		toumingdu = fminf(toumingdu + 0.001f, 1.0f);
+//
+//	float jitan_alpha = toumingdu;
+//
+//	/* ===== 祭坛矩形 ===== */
+//	float jitanW = jitan.width * 3.0f;
+//	float jitanH = jitan.height * 3.0f;
+//	float jitanX = (screen_length_x - jitanW) * 0.5f;
+//	float jitanY = screen_length_y - jitanH;
+//
+//	/* ===== 玩家中心 ===== */
+//	Vector2 p;
+//	p.x = player.xy.x + 1.3f * player.size;
+//	p.y = player.xy.y + 1.4f * player.size;
+//
+//	/* ===== 本帧位移向量 ===== */
+//	static Vector2 last_p = { 0, 0 };
+//	Vector2 delta;
+//	delta.x = p.x - last_p.x;
+//	delta.y = p.y - last_p.y;
+//	last_p = p;
+//
+//	/* ===== 最大合法位移（防止高速横穿） ===== */
+//	float maxStep = 2.0f * (1.0f - jitan_alpha);
+//	float len2 = delta.x * delta.x + delta.y * delta.y;
+//
+//	if (len2 > maxStep * maxStep) {
+//		float len = sqrtf(len2);
+//		delta.x = delta.x / len * maxStep;
+//		delta.y = delta.y / len * maxStep;
+//
+//		/* 回写裁剪后的位移 */
+//		player.xy.x = last_p.x - 1.3f * player.size + delta.x;
+//		player.xy.y = last_p.y - 1.4f * player.size + delta.y;
+//		p.x = last_p.x + delta.x;
+//		p.y = last_p.y + delta.y;
+//	}
+//
+//	/* ===== 引导区域 ===== */
+//	float guideTop = jitanY;
+//	float guideBottom = jitanY + jitanH * 0.45f;
+//	float guideLeft = jitanX + jitanW * 0.25f;
+//	float guideRight = jitanX + jitanW * 0.75f;
+//
+//	if (p.x > guideLeft && p.x < guideRight &&
+//		p.y > guideTop && p.y < guideBottom) {
+//
+//		/* 非法方向判定：
+//		   - 向上
+//		   - 横向分量明显大于纵向
+//		*/
+//		int illegal =
+//			(delta.y < -0.2f) ||
+//			(fabsf(delta.x) > fabsf(delta.y));
+//
+//		if (illegal) {
+//			/* 沿非法方向反推 */
+//			float kick = 2.0f + 4.0f * jitan_alpha;
+//
+//			player.xy.x -= delta.x * kick;
+//			player.xy.y -= delta.y * kick;
+//
+//			return 0;
+//		}
+//	}
+//
+//	/* ===== 献祭判定（中心） ===== */
+//	float cx = jitanX + jitanW * 0.5f;
+//	float cy = jitanY + jitanH * 0.5f;
+//
+//	float dx = p.x - cx;
+//	float dy = p.y - cy;
+//
+//	if (dx * dx + dy * dy < player.size * player.size * 0.8f)
+//		return 1;
+//
+//	return 0;
+//}
+
+int check_jitan_sacrifice(Texture jitan)
 {
-	return (p1.x - p3.x) * (p2.y - p3.y) -
-		(p2.x - p3.x) * (p1.y - p3.y);
-}
-
-static int point_in_triangle(Vector2 pt, Vector2 v1, Vector2 v2, Vector2 v3)
-{
-	float d1 = sign_point(pt, v1, v2);
-	float d2 = sign_point(pt, v2, v3);
-	float d3 = sign_point(pt, v3, v1);
-
-	int has_neg = (d1 < 0) || (d2 < 0) || (d3 < 0);
-	int has_pos = (d1 > 0) || (d2 > 0) || (d3 > 0);
-
-	return !(has_neg && has_pos);
-}
-int check_jitan_guidance_and_sacrifice(Texture jitan)
-{
-	if (jieduan != 5) return 0;
-	/* ===== 透明度（同步视觉） ===== */
-	static float toumingdu = 0.0f;
-	if (toumingdu < 1.0f)
-		toumingdu = fminf(toumingdu + 0.001f, 1.0f);
-
-	float jitan_alpha = toumingdu;
-
-	/* ===== 祭坛矩形 ===== */
+	/* ===== 祭坛绘制参数（与绘制一致） ===== */
 	float jitanW = jitan.width * 3.0f;
 	float jitanH = jitan.height * 3.0f;
 	float jitanX = (screen_length_x - jitanW) * 0.5f;
 	float jitanY = screen_length_y - jitanH;
 
-	/* ===== 玩家中心 ===== */
+	/* ===== 玩家中心（和你其它函数保持一致的偏移） ===== */
 	Vector2 p;
 	p.x = player.xy.x + 1.3f * player.size;
 	p.y = player.xy.y + 1.4f * player.size;
 
-	/* ===== 本帧位移向量 ===== */
-	static Vector2 last_p = { 0, 0 };
-	Vector2 delta;
-	delta.x = p.x - last_p.x;
-	delta.y = p.y - last_p.y;
-	last_p = p;
+	///* ===== 如果在祭坛矩形区域内，先触发引导/限制（矩形内均生效） ===== */
+	//if (p.x >= jitanX && p.x <= jitanX + jitanW &&
+	//	p.y >= jitanY && p.y <= jitanY + jitanH) {
+	//	check_jitan_guidance_and_sacrifice(jitan);
+	//}
+	/* ===== 献祭判定点（视觉锚点） ===== */
+	float sac_x = jitanX + jitanW * 0.47f;
+	float sac_y = jitanY + jitanH * 0.14f;   
 
-	/* ===== 最大合法位移（防止高速横穿） ===== */
-	float maxStep = 2.5f + 2.0f * (1.0f - jitan_alpha);
-	float len2 = delta.x * delta.x + delta.y * delta.y;
+	//DrawCircle(sac_x, sac_y, 50, RED);
 
-	if (len2 > maxStep * maxStep) {
-		float len = sqrtf(len2);
-		delta.x = delta.x / len * maxStep;
-		delta.y = delta.y / len * maxStep;
-
-		/* 回写裁剪后的位移 */
-		player.xy.x = last_p.x - 1.3f * player.size + delta.x;
-		player.xy.y = last_p.y - 1.4f * player.size + delta.y;
-		p.x = last_p.x + delta.x;
-		p.y = last_p.y + delta.y;
-	}
-
-	/* ===== 引导区域 ===== */
-	float guideTop = jitanY;
-	float guideBottom = jitanY + jitanH * 0.45f;
-	float guideLeft = jitanX + jitanW * 0.25f;
-	float guideRight = jitanX + jitanW * 0.75f;
-
-	if (p.x > guideLeft && p.x < guideRight &&
-		p.y > guideTop && p.y < guideBottom) {
-
-		/* 非法方向判定：
-		   - 向上
-		   - 横向分量明显大于纵向
-		*/
-		int illegal =
-			(delta.y < -0.2f) ||
-			(fabsf(delta.x) > fabsf(delta.y));
-
-		if (illegal) {
-			/* 沿非法方向反推 */
-			float kick = 2.0f + 4.0f * jitan_alpha;
-
-			player.xy.x -= delta.x * kick;
-			player.xy.y -= delta.y * kick;
-
-			return 0;
-		}
-	}
-
-	/* ===== 献祭判定（中心） ===== */
-	float cx = jitanX + jitanW * 0.5f;
-	float cy = jitanY + jitanH * 0.5f;
-
-	float dx = p.x - cx;
-	float dy = p.y - cy;
-
-	if (dx * dx + dy * dy < player.size * player.size * 0.8f)
-		return 1;
-
-	return 0;
-}
-
-
-int check_jitan_sacrifice(Texture jitan)
-{
-	/* ===== 祭坛绘制参数 ===== */
-	float jitanW = jitan.width * 3.0f;
-	float jitanH = jitan.height * 3.0f;
-	float jitanX = (screen_length_x - jitanW) * 0.5f;
-	float jitanY = screen_length_y - jitanH;
-
-	/* ===== 定义三角形有效区域 ===== */
-	Vector2 tri_top;
-	tri_top.x = jitanX + jitanW * 0.5f;
-	tri_top.y = jitanY + jitanH * 0.15f;
-
-	Vector2 tri_left;
-	tri_left.x = jitanX + jitanW * 0.2f;
-	tri_left.y = jitanY + jitanH * 0.9f;
-
-	Vector2 tri_right;
-	tri_right.x = jitanX + jitanW * 0.8f;
-	tri_right.y = jitanY + jitanH * 0.9f;
-
-	/* ===== 玩家中心 ===== */
-	Vector2 p;
-	p.x = player.xy.x + 1.3*player.size;
-	p.y = player.xy.y + 1.4*player.size;
-	//DrawTriangleLines(tri_top, tri_left, tri_right, RED);
-
-	/* ===== 第一层：必须在三角形内部 ===== */
-	if (!point_in_triangle(p, tri_top, tri_left, tri_right))
+	/* ===== 圆形判定（半径 20） ===== */
+	float dx = p.x - sac_x;
+	float dy = p.y - sac_y;
+	if (dx * dx + dy * dy <15000.0f)
+		player.v_xy.x *= 0.8;
+	player.v_xy.y *= 0.8;
+	if (dx * dx + dy * dy >2500.0f)
 		return 0;
-
-	float dx = p.x - tri_top.x;
-	float dy = p.y - tri_top.y;
-	float dist = sqrtf(dx * dx + dy * dy);
-
-	/* 阈值 */
-	//if (dist > player.size * 0.2f)
-	//	return 0;
-
+	player.xy.x += (rand() % 20) / 4.0f - 2.5f;
+	player.v_xy.x *= 0.5;
+	player.v_xy.y *= 0.5;
+	/* ===== 在三角形内：显示提示并处理连续按 K ===== */
 	DrawText(
 		"Press the 'K' key to complete the sacrifice",
 		screen_length_x / 2 - 90,
@@ -1649,27 +1653,22 @@ int check_jitan_sacrifice(Texture jitan)
 		RED
 	);
 
-	/* ===== 连续按 K ===== */
-	if(check_jitan_guidance_and_sacrifice(jitan))
-	{
-		static int k_count = 0;
-		static float last_k_time = 0.0f;
+	/* ===== 连续按 K 的逻辑 ===== */
+	static int k_count = 0;
+	static float last_k_time = 0.0f;
+	float now = GetTime();
 
-		float now = GetTime();
-
-		if (IsKeyPressed(KEY_K)) {
-			if (now - last_k_time > 0.6f)
-				k_count = 0;
-
-			k_count++;
-			last_k_time = now;
-		}
-
-		if (k_count >= 6) {
+	if (IsKeyPressed(KEY_K)) {
+		if (now - last_k_time > 0.6f)
 			k_count = 0;
-			printf("success\n");
-			return 1;
-		}
+		k_count++;
+		last_k_time = now;
+	}
+
+	if (k_count >= 6) {
+		k_count = 0;
+		printf("success\n");
+		return 1;
 	}
 
 	return 0;
