@@ -51,6 +51,13 @@ typedef struct fish {
 	int image_status;
 	int lizixiaoguo;
 	int kinds;//0是玩家，1小丑鱼，2是河豚,3剑鱼，4鲨鱼,5变异剑鱼,6变异剑鱼2，7变异鲨鱼，8变异鲨鱼2，9变异河豚
+
+	//仅在BOSS阶段调用
+	float   timer;   // 行为内部计时
+	int     phase;   // 子阶段（仅 kind=102 使用）
+	float   angle;   // 当前朝向角度（用于渲染）
+	Vector2 last_xy;
+
 }fish;
 
 typedef struct fish_NPC {
@@ -80,6 +87,7 @@ typedef enum {
 	UI_PLAYING,
 	UI_DEAD,
 	UI_STOP,
+	UI_BOSS,
 	UI_SETTING
 } UIState;
 
@@ -94,7 +102,7 @@ int running = 1;//0是退出，1是正常，2是暂停，3是死亡
 int  screen_length_x=1920,screen_length_y=1080,runingtime = 0;
 fish player = { {screen_length_x / 2,screen_length_y / 2},{0,0},5,30.0 * sizetimes,30.0 * sizetimes,0,0,0 };//玩家初始化
 int difficult = 1.5, jieduan = 0;  double san = 100;
-int slow_timer = 0, super_slow_timer = 0,mutation=0, ate_mutant_fish=0;float fade = 1.0f;
+int slow_timer = 0, super_slow_timer = 0,mutation=0, ate_mutant_fish=0,xianji=0;float fade = 1.0f;
 bool resetting = 0; 
 int collision_redundancy = 0,show_hitbox = 0,developer_mode=0;            //碰撞冗余， 显示碰撞箱,开发者模式
 
@@ -134,12 +142,16 @@ void DrawFishAutoFlip(
 void playermutation(void);
 int check_jitan_sacrifice(Texture jitan);
 void draw_menu(void);
+void update_all_bossfish(fishPool* pool,int);
+void create_bossfish(fishPool* pool, int kind, int count,int);
+void DrawFishRotated(Texture2D tex, Vector2 pos, float size, float baseSize, Color tint, float rotation);
+void DrawFishAutoFlipEx(Texture2D tex_left, Vector2 pos, float size, float baseSize, Color tint, float vx, float rotation);
+void collision_player_bossfish(fishPool* pool, int fishnumber);
+
 
 int main() {
 	screen_length_x = 2048;
 	screen_length_y = 1152;
-
-	// 使用默认分辨率
 	game_resolution = 3;
 	// 根据默认分辨率设置窗口大小
 	switch (game_resolution) {
@@ -163,8 +175,7 @@ int main() {
 		LoadTexture("../img/fish/玩家 左向 模糊.png"),
 		LoadTexture("../img/fish/玩家 左向 清晰.png")
 	};
-	Texture player_gray_left =
-		LoadTexture("../img/fish/玩家 灰度 左向.png");
+	Texture player_gray_left =LoadTexture("../img/fish/玩家 灰度 左向.png");
 	Texture player_tex_by[6] = {
 		LoadTexture("../img/fish/玩家 变异1 左向.png"),
 		LoadTexture("../img/fish/玩家 变异2 左向.png"),
@@ -177,34 +188,22 @@ int main() {
 
 	// ================= NPC 鱼贴图 =================
 
-	Texture xiaochouyu_left =
-		LoadTexture("../img/fish/小丑鱼 左向.png");
+	Texture xiaochouyu_left =LoadTexture("../img/fish/小丑鱼 左向.png");
 
-	Texture hetun_left =
-		LoadTexture("../img/fish/河豚 左向.png");
-	Texture hetun_puffed_left =
-		LoadTexture("../img/fish/河豚 鼓起 左向.png");
+	Texture hetun_left =LoadTexture("../img/fish/河豚 左向.png");
+	Texture hetun_puffed_left =LoadTexture("../img/fish/河豚 鼓起 左向.png");
+	Texture hetun_b1_left = LoadTexture("../img/fish/河豚 变异1 左向.png");
+	Texture hetun_puffed_b1_left = LoadTexture("../img/fish/河豚 鼓起 变异1 左向.png");
 
-	Texture jianyu_left =
-		LoadTexture("../img/fish/剑鱼 左向.png");
-	Texture jianyu_b1_left =
-		LoadTexture("../img/fish/剑鱼 变异1 左向.png");
-	Texture jianyu_b2_left =
-		LoadTexture("../img/fish/剑鱼 变异2 左向.png");
+	Texture jianyu_left =LoadTexture("../img/fish/剑鱼 左向.png");
+	Texture jianyu_b1_left =LoadTexture("../img/fish/剑鱼 变异1 左向.png");
+	Texture jianyu_b2_left =LoadTexture("../img/fish/剑鱼 变异2 左向.png");
 
-	Texture shayu_left =
-		LoadTexture("../img/fish/鲨鱼 左向.png");
-	Texture shayu_b1_left =
-		LoadTexture("../img/fish/鲨鱼 变异1 左向.png");
-	Texture shayu_b2_left =
-		LoadTexture("../img/fish/鲨鱼 变异2 左向.png");
+	Texture shayu_left =LoadTexture("../img/fish/鲨鱼 左向.png");
+	Texture shayu_b1_left =LoadTexture("../img/fish/鲨鱼 变异1 左向.png");
+	Texture shayu_b2_left =LoadTexture("../img/fish/鲨鱼 变异2 左向.png");
 
-	Texture hetun_b1_left =
-		LoadTexture("../img/fish/河豚 变异1 左向.png");
-	Texture hetun_puffed_b1_left =
-		LoadTexture("../img/fish/河豚 鼓起 变异1 左向.png");
-	Texture jitan =
-		LoadTexture("../img/other/祭坛.png");
+	Texture jitan =LoadTexture("../img/other/祭坛.png");
 
 	SetWindowState(FLAG_VSYNC_HINT);
 	fishPool pool;
@@ -292,7 +291,17 @@ int main() {
 
 		case UI_PLAYING:
 		{
-			uiState = UI_PLAYING;
+			if (IsKeyPressed(KEY_SPACE)) {
+				Image stop_img = LoadImageFromScreen();
+				static bool IF_img_used = 0;
+				if (IF_img_used) UnloadTexture(stop_sight);
+				stop_sight = LoadTextureFromImage(stop_img);
+				UnloadImage(stop_img);
+				IF_img_used = true;
+				uiState = UI_STOP;
+				PollInputEvents();
+				continue;
+			}
 			change_difficult(&pool);
 			playermove(&player);
 			playermutation();
@@ -311,6 +320,14 @@ int main() {
 				if (toumingdu >= 0.95) {
 					if (check_jitan_sacrifice(jitan)) {
 						// 祭坛检查逻辑
+						if (xianji == 0) {
+							xianji = 1;
+						}
+						else {
+							xianji = 0;
+							player.threatsize = 60;
+							uiState = UI_BOSS;
+						}
 					}
 				}
 			}
@@ -487,7 +504,7 @@ int main() {
 
 			runingtime++;
 			san += 0.0001;
-			san -= 0.001 * jieduan;
+			san -= 0.001 * jieduan*jieduan;
 
 			if (!isPaused && uiState == UI_PLAYING) {
 				DrawText("Press SPACE to pause", 10, 10, 20, WHITE);
@@ -505,17 +522,8 @@ int main() {
 			EndDrawing();
 
 		 runingtime++;
-		 if (resetting)resetting = 0;
-			if (IsKeyPressed(KEY_SPACE)) {
-				Image stop_img = LoadImageFromScreen();
-				static bool IF_img_used = 0;
-				if (IF_img_used) UnloadTexture(stop_sight);
-				stop_sight = LoadTextureFromImage(stop_img);
-				UnloadImage(stop_img);
-				IF_img_used = true;
-				uiState = UI_STOP;
-				PollInputEvents();
-			}
+		    if (resetting)resetting = 0;
+			
 			
 			if (running == 3) {
 				uiState = UI_DEAD;
@@ -544,7 +552,7 @@ int main() {
 				player.kinds = 0;
 				selected = START;//UI数据
 				difficult = 1.5; jieduan = 0; san = 100.0f;
-				slow_timer = 0; super_slow_timer = 0; mutation = 0; ate_mutant_fish = 0; fade = 1.0f; toumingdu = 0;
+				slow_timer = 0; super_slow_timer = 0;if(!xianji) mutation = 0; if(!xianji)ate_mutant_fish = 0; fade = 1.0f; toumingdu = 0;
 				//全局变量初始化
 				init_fish_pool(&pool);
 				srand(time(NULL));//函数初始化
@@ -577,31 +585,217 @@ int main() {
 
 		case UI_SETTING:
 		{
-			
 			settings_menu_logic();
-			
-			break;
 		}
-		}
+		break;
+		case UI_BOSS://************************************************BOSS**************************************************************//
+		{
 
+			static Texture bossfish[6] = {player_tex[1],player_tex_by[2],player_gray_left,player_tex_by[3],player_tex_by[4],player_tex_by[5] };
+			if (developer_mode) {
+				if (runingtime % 10 == 0) {
+					printf("size:%.2f+threat:%.2f 阶段：%d 下阶段门槛：%lf time:%d san:%.3f fade:%.3f\n",
+						player.size, player.threatsize, jieduan,
+						((size_threshold[jieduan] * sizetimes) * san / 100),
+						runingtime, san, fade);
+				}
+				
+			}
+			playermove(&player);
+			static float boss_wave_timer = 0.0f;
+			static int   boss_wave_phase = 0;
+			static int   boss_wave_loop = 0;
+			// ================= BOSS Wave 调度 =================
+			boss_wave_timer += 0.02f;
+			static int fishnumber =(int) (ate_mutant_fish + 1) / (san * 3);
+			switch (boss_wave_phase)
+			{
+			case 0:
+				// 第一拍：纯放射，给玩家建立节奏
+				create_bossfish(&pool, 101, 4 + boss_wave_loop,fishnumber);
+				boss_wave_phase = 1;
+				boss_wave_timer = 0;
+				break;
+
+			case 1:
+				// 停顿（呼吸）
+				if (boss_wave_timer > 0.9f) {
+					create_bossfish(&pool, 103, 2 + boss_wave_loop / 2,fishnumber);
+					boss_wave_phase = 2;
+					boss_wave_timer = 0;
+				}
+				break;
+
+			case 2:
+				// 环绕登场
+				if (boss_wave_timer > 1.6f) {
+					create_bossfish(&pool, 102, min(3 + boss_wave_loop,6), fishnumber);
+					boss_wave_phase = 3;
+					boss_wave_timer = 0;
+				}
+				break;
+
+			case 3:
+				// 混合压迫
+				if (boss_wave_timer > 1.8f) {
+					create_bossfish(&pool, 101, 3,fishnumber);
+					create_bossfish(&pool, 103, 3,fishnumber);
+					boss_wave_phase = 4;
+					boss_wave_timer = 0;
+				}
+				break;
+
+			case 4:
+				// 收束 / 空拍
+				if (boss_wave_timer > 2.0f) {
+					boss_wave_phase = 0;
+					boss_wave_loop++;
+					boss_wave_timer = 0;
+				}
+				break;
+			}
+			if (boss_wave_loop > 5)
+				boss_wave_loop = 5;
+			update_all_bossfish(&pool,fishnumber);
+			collision_player_bossfish(&pool, fishnumber);
+
+			BeginDrawing();
+			ClearBackground(BLACK);
+			draw_background1();
+			draw_depth_filter();
+			draw_player_glow();
+			draw_fish_glow(&pool);
+			float t = depthTrans.tone;
+			t = t * t;   // 和光圈一致
+
+			// 亮度系数：0.4 ~ 1.0
+			float brightness = 1.0f - t * 0.6f;
+			if (brightness < 0.4f) brightness = 0.4f;
+
+			unsigned char v = (unsigned char)(255 * brightness);
+
+			Color fishTint = { v, v, v, 255 };
+
+			// 渲染玩家鱼
+			Color stateTint = WHITE;
+			// 如果中毒（减速中）
+			if (slow_timer > 0) {
+				Color green = { 180, 255, 180, 255 };
+				stateTint = green;  // 淡绿色
+			}
+			Color playerTint = {
+				(unsigned char)(stateTint.r * brightness),
+				(unsigned char)(stateTint.g * brightness),
+				(unsigned char)(stateTint.b * brightness),
+				(unsigned char)(255 * fade)
+			};
+			Color grayTint = { v, v, v, 255 };
+			DrawFishAutoFlip(
+				player_gray_left,
+				player.xy,
+				player.size,
+				32.0f,
+				grayTint,
+				player.v_xy.x
+			);
+			if (mutation == 0) {
+				int frame = (runingtime % 10 < 5) ? 0 : 1;
+				DrawFishAutoFlip(
+					player_tex[frame],
+					player.xy,
+					player.size,
+					32.0f,
+					playerTint,
+					player.v_xy.x
+				);
+			}
+			else {
+				DrawFishAutoFlip(
+					player_tex_by[mutation - 1],
+					player.xy,
+					player.size,
+					32.0f,
+					playerTint,
+					player.v_xy.x
+				);
+			}
+			// 玩家渲染结束
+			// ================= BOSS鱼渲染 =================
+			for (int i = 0; i <fishnumber; i++) {
+				if (!pool.used[i]) continue;
+
+				fish* f = &pool.fishnpc[i].fish;
+
+				// 只渲染BOSS鱼种类（101, 102, 103）
+				if (f->kinds < 100) continue;
+
+				// 根据BOSS鱼种类选择不同的贴图和颜色
+				Texture2D* tex_to_use = NULL;
+				Color bossTint = fishTint;
+				if(f->kinds==103){
+					tex_to_use = &bossfish[f->image_status];
+					Color black = { 0,0,0,140 };
+					bossTint = black;
+					bossTint.r = (unsigned char)(bossTint.r * brightness);
+					bossTint.g = (unsigned char)(bossTint.g * brightness);
+					bossTint.b = (unsigned char)(bossTint.b * brightness);
+				}
+				else{
+					tex_to_use = &bossfish[f->image_status];
+					//Color black = { 255,255,255,140 };
+					bossTint = WHITE;
+					bossTint.r = (unsigned char)(bossTint.r * brightness);
+					bossTint.g = (unsigned char)(bossTint.g * brightness);
+					bossTint.b = (unsigned char)(bossTint.b * brightness);
+				}
+				if (tex_to_use) {
+					DrawFishRotated(
+						*tex_to_use,
+						f->xy,
+						f->size,
+						32.0f,
+						bossTint,
+						f->angle
+					);
+				}
+				// 调试：显示碰撞箱
+				if (show_hitbox && IsKeyDown(KEY_Q)&&developer_mode) {
+					Vector2 center = {
+						f->xy.x + f->size * 1.4f,
+						f->xy.y + f->size * 1.3f
+					};
+					DrawCircleLines(center.x, center.y, f->size, RED);
+					DrawText(
+						TextFormat("Kind:%d Ang:%.1f", f->kinds, f->angle),
+						center.x,
+						center.y,
+						20,
+						WHITE
+					);
+				}
+			}
+			// BOSS鱼渲染结束
+
+				if (IsKeyPressed(KEY_SPACE)) {
+					DrawText("The Power Doesn't Delong To You", screen_length_x / 2 - 300, screen_length_y / 2, 30, RED);
+					
+				}else if (show_hitbox&&!developer_mode) {
+					if (IsKeyDown(KEY_Q))DrawText("The Knowledge Doesn't Delong To You", screen_length_x / 2 - 300, screen_length_y / 2, 30, RED);
+					
+				}
+				EndDrawing();
+				runingtime++;
+		}
+		break;
+		}
+		
 		WaitTime(0.05);
 
 	}
 	return 0;
 }
 
-	
-
-
-
-void DrawFishAutoFlip(
-	Texture2D tex_left,
-	Vector2 pos,
-	float size,
-	float baseSize,
-	Color tint,
-	float vx
-)
+void DrawFishAutoFlip(Texture2D tex_left,Vector2 pos,float size,float baseSize,Color tint,float vx)
 {
 	Rectangle src = {
 		0,
@@ -636,11 +830,6 @@ void DrawFishAutoFlip(
 		tint
 	);
 }
-
-
-
-
-
 void playermove(fish* player) {
 	static float init_a = 5.0f;
 	if(resetting)init_a = 5.0f;
@@ -692,8 +881,12 @@ void playermove(fish* player) {
 			lastPressTime[i] = 0.0;
 		}
 	}
+	static bool getability = 0;
+	if (resetting)getability = 0;
 	if (mutation >= 3) {
-		
+		getability = 1;
+	}
+	if(getability){
 		double currentTime = GetTime();
 		int keyIndex = -1;
 		if (IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_D)) keyIndex = 0;
@@ -709,7 +902,7 @@ void playermove(fish* player) {
 				case 2: derta_vy += player->a * 10; break;
 				case 3: derta_vy -= player->a * 10; break;
 				}
-				cooldown = 100;
+				cooldown = 80;
 				keyPressCount[keyIndex] = 0;
 			}
 			else {
@@ -743,9 +936,6 @@ void playermove(fish* player) {
 
 
 }
-
-
-
 void init_fish_pool(fishPool* pool) {
 	for (int i = 0; i < MAX_fish; i++) {
 		pool->used[i] = 0;
@@ -758,8 +948,6 @@ void init_fish_pool(fishPool* pool) {
 	}
 	pool->active_count = 0;
 }
-
-
 fish_NPC* get_fish(fishPool* pool) {
 	for (int i = 0; i < MAX_fish; i++) {
 		if (pool->used[i] == 0) {
@@ -771,8 +959,6 @@ fish_NPC* get_fish(fishPool* pool) {
 	}
 	return 0;
 }
-
-
 void release_fish(fishPool* pool, fish_NPC* fishPtr) {
 	int index = fishPtr - pool->fishnpc;
 	if (index >= 0 && index < MAX_fish) {
@@ -781,13 +967,14 @@ void release_fish(fishPool* pool, fish_NPC* fishPtr) {
 		fishPtr->active = 0;
 	}
 }
+
 void update_all_fish(fishPool* pool) {
 	static int puffer_timer[MAX_fish] = { 0 };
 	if(resetting)for(int i=0;i<MAX_fish;i++){ puffer_timer[i] =0 ; }
 	for (int i = 0; i < MAX_fish; i++) {
 		if (pool->used[i]) {
 			fish_NPC* fishPtr = &pool->fishnpc[i];
-			if (fishPtr->fish.kinds ==3&& fishPtr->fish.kinds == 4)fishPtr->fish.size = fishPtr->fish.threatsize;
+			if (fishPtr->fish.kinds ==3||fishPtr->fish.kinds == 4)fishPtr->fish.size = fishPtr->fish.threatsize;
 				else fishPtr->fish.size = 80 * atan((fishPtr->fish.threatsize - 42) / 80) + 42;
 
 			fishPtr->fish.xy.x += fishPtr->fish.v_xy.x;
@@ -877,7 +1064,6 @@ void update_all_fish(fishPool* pool) {
 		}
 	}
 }
-
 fish_NPC* create_npcfish(fishPool* pool, float x, float y, int kind) {
 
 	static int kind_min_size[] = {
@@ -1051,7 +1237,6 @@ fish_NPC* create_npcfish(fishPool* pool, float x, float y, int kind) {
 	newFish->aim[numberofaim].y = max(100 * rand() % screen_length_y, 2000);
 	return newFish;
 }
-
 Vector2 get_legal_point(void) {
 
 	Vector2 point;
@@ -1063,7 +1248,6 @@ Vector2 get_legal_point(void) {
 
 	return point;
 }
-
 void collision_npc(fishPool* pool) {
 	for (int i = 0; i < MAX_fish; i++) {
 		if (pool->used[i]) {
@@ -1325,9 +1509,6 @@ void draw_background1(void)
 		DrawTexturePro(bg5, src5, dst5, origin5, 0, WHITE);
 	}
 }
-
-
-
 void change_difficult(fishPool* pool) {
 	int possibility[5] = { 23,22,25,28,30 };
 	static int size_threshold[] = {
@@ -1402,27 +1583,20 @@ void draw_player_glow()
 	Vector2 ci;
 	ci.x = player.xy.x + player.size * 1.4f;
 	ci.y = player.xy.y + player.size * 1.3f;
-
 	float size = player.size;
-
 	float t = depthTrans.tone;
 	t = t * t;
-
 	float baseAlpha = t * 60.0f;
-
-	/* ===== 呼吸控制：默认（mutation < 3） ===== */
 	float pulseFreq = 3.0f;
 	float pulseAmp = 0.3f;
 	float pulseBase = 0.8f;
 
-	/* ===== 阶段 3：异常开始，呼吸变弱 ===== */
 	if (mutation >= 3 && mutation < 5) {
 		pulseFreq = 3.5f;
 		pulseAmp = 0.4f;
 		pulseBase = 0.87f;
 	}
 
-	/* ===== 阶段 5：非生物感，几乎无呼吸 ===== */
 	if (mutation >= 5) {
 		pulseFreq =4.0f;
 		pulseAmp = 0.5f;
@@ -1434,7 +1608,6 @@ void draw_player_glow()
 
 	Color c1, c2, c3;
 
-	/* ===== 颜色方案 ===== */
 	if (mutation < 3) {
 		/* 原始冷蓝 */
 		c1.r = 180; c1.g = 220; c1.b = 255;
@@ -1468,8 +1641,6 @@ void draw_player_glow()
 		c3.r = 120; c3.g = 90;  c3.b = 180;
 		c3.a = (unsigned char)(baseAlpha * 0.3f);
 	}
-
-	/* ===== 半径：非常克制的变化 ===== */
 	float r1 = size * 1.0f;
 	float r2 = size * 1.6f;
 	float r3 = size * 2.4f;
@@ -1488,8 +1659,6 @@ void draw_player_glow()
 	DrawCircle(ci.x, ci.y, r2, c2);
 	DrawCircle(ci.x, ci.y, r3, c3);
 }
-
-
 void draw_fish_glow(fishPool* pool)
 {
 	int i;
@@ -1610,32 +1779,18 @@ void playermutation(void) {
 			mutation = 6;
 	}
 }
-
 int check_jitan_sacrifice(Texture jitan)
 {
-	/* ===== 祭坛绘制参数（与绘制一致） ===== */
 	float jitanW = jitan.width * 3.0f;
 	float jitanH = jitan.height * 3.0f;
 	float jitanX = (screen_length_x - jitanW) * 0.5f;
 	float jitanY = screen_length_y - jitanH;
-
-	/* ===== 玩家中心（和你其它函数保持一致的偏移） ===== */
 	Vector2 p;
 	p.x = player.xy.x + 1.3f * player.size;
 	p.y = player.xy.y + 1.4f * player.size;
-
-	///* ===== 如果在祭坛矩形区域内，先触发引导/限制（矩形内均生效） ===== */
-	//if (p.x >= jitanX && p.x <= jitanX + jitanW &&
-	//	p.y >= jitanY && p.y <= jitanY + jitanH) {
-	//	check_jitan_guidance_and_sacrifice(jitan);
-	//}
-	/* ===== 献祭判定点（视觉锚点） ===== */
 	float sac_x = jitanX + jitanW * 0.47f;
 	float sac_y = jitanY + jitanH * 0.14f;
-
 	//DrawCircle(sac_x, sac_y, 50, RED);
-
-	/* ===== 圆形判定（半径 20） ===== */
 	float dx = p.x - sac_x;
 	float dy = p.y - sac_y;
 	if (dx * dx + dy * dy < 15000.0f)
@@ -1646,16 +1801,13 @@ int check_jitan_sacrifice(Texture jitan)
 	player.xy.x += (rand() % 20) / 4.0f - 2.5f;
 	player.v_xy.x *= 0.5;
 	player.v_xy.y *= 0.5;
-	/* ===== 在三角形内：显示提示并处理连续按 K ===== */
 	DrawText(
 		"Press the 'K' key to complete the sacrifice",
-		screen_length_x / 2 - 90,
-		screen_length_y - 40,
+		screen_length_x / 2 - 150,
+		screen_length_y - 60,
 		30,
 		RED
 	);
-
-	/* ===== 连续按 K 的逻辑 ===== */
 	static int k_count = 0;
 	static float last_k_time = 0.0f;
 	//if (resetting) {
@@ -1689,9 +1841,6 @@ void UI_DrawTitle(void)
 		Fade(BLACK, 0.7f)
 	);
 }
-
-
-
 void UI_DrawDead(void)
 {
 	DrawRectangle(
@@ -1726,7 +1875,6 @@ void UI_DrawDead(void)
 		GRAY
 	);
 }
-
 void draw_settings_menu(void) {
 	// 设置项文本
 	const char* settingsTexts[SETTINGS_COUNT] = {
@@ -2018,7 +2166,6 @@ void settings_menu_logic(void) {
 		EndDrawing();
 	}
 }
-
 void draw_menu(void) {
 	static Rectangle buttons[COUNT];
 
@@ -2143,4 +2290,321 @@ void draw_menu(void) {
 	//DrawText("ESC TO RETURN", escX, screen_length_y - 70, 25, LIGHTGRAY);
 }
 
+void update_all_bossfish(fishPool* pool,int fishnumber)
+{
+	Vector2 playeri = { player.xy.x + 1.3 * player.size,player.xy.y + 1.4 * player.size };
 
+	for (int i = 0; i < fishnumber; i++) {
+		if (!pool->used[i]) continue;
+
+		fish* f = &pool->fishnpc[i].fish;
+		f->size = f->threatsize; f->last_xy = f->xy;
+
+		// ================= kind 101：放射型 =================
+		if (f->kinds == 101) {
+			f->xy.x += f->v_xy.x;
+			f->xy.y += f->v_xy.y;
+			f->v_xy.x *= 0.998f;
+			f->v_xy.y *= 0.998f;
+		}
+
+		// ================= kind 102：环绕 → 射出 =================
+		else if (f->kinds == 102)
+		{
+			
+
+			// ================= phase 0：入场 =================
+			if (f->phase == 0) {
+				f->xy.x += f->v_xy.x;
+				f->xy.y += f->v_xy.y;
+
+				// 接近玩家后，切换到环绕
+				float dx = f->xy.x - playeri.x;
+				float dy = f->xy.y - playeri.y;
+				float dist = sqrtf(dx * dx + dy * dy);
+
+				if (dist < 300.0f+ 1.5 * f->size) {
+					f->phase = 1;
+					 f->timer = atan2f(dy, dx);
+				}
+			}
+			
+			// ================= phase 1：环绕 =================
+			else if (f->phase == 1) {
+				float r = 280.0f+1.5*f->size;
+				float rot_speed = 0.1f;
+
+				f->timer += rot_speed;
+
+				f->xy.x = playeri.x + cosf(f->timer) * r;
+				f->xy.y = playeri.y + sinf(f->timer) * r;
+
+				// 环绕一圈后射出
+				if (f->timer > 2 * PI + 0.5f) {
+					Vector2 d = {
+						cosf(f->timer),
+						sinf(f->timer)
+					};
+
+					f->v_xy.x = -d.x * 30.0f;
+					f->v_xy.y = -d.y * 30.0f;
+					f->phase = 2;
+				}
+
+
+				// ================= phase 2：射出 =================
+				else {
+					f->xy.x += f->v_xy.x;
+					f->xy.y += f->v_xy.y;
+					f->v_xy.x *= 0.995f;
+					f->v_xy.y *= 0.995f;
+				}
+			}
+			else {
+				f->xy.x += f->v_xy.x;
+				f->xy.y += f->v_xy.y;
+
+				// 射出后减速
+				f->v_xy.x *= 0.995f;
+				f->v_xy.y *= 0.995f;
+			}
+		}
+
+		// ================= kind 103：残影型 =================
+		else if (f->kinds == 103) {
+			f->xy.x += f->v_xy.x;
+			f->xy.y += f->v_xy.y;
+			if (f->timer < 50.0f) {
+
+				Vector2 d = {
+					player.xy.x - f->xy.x,
+					player.xy.y - f->xy.y
+				};
+				float len = sqrtf(d.x * d.x + d.y * d.y);
+				if (len > 0.001f) {
+					d.x /= len;
+					d.y /= len;
+				}
+				float accel = 1.5f;
+				f->v_xy.x += d.x * accel;
+				f->v_xy.y += d.y * accel;
+				float speed = sqrtf(f->v_xy.x * f->v_xy.x + f->v_xy.y * f->v_xy.y);
+				float max_speed = 12.0f;
+				if (speed > max_speed) {
+					f->v_xy.x = f->v_xy.x / speed * max_speed;
+					f->v_xy.y = f->v_xy.y / speed * max_speed;
+				}
+			}
+			f->timer += 1.0f;
+		}
+		if (f->xy.x < -300 ||f->xy.x > screen_length_x + 300 ||
+			f->xy.y < -250 || f->xy.y > screen_length_y + 250) {
+			pool->used[i] = 0;
+			pool->active_count--;
+		}
+		Vector2 move = {
+	f->xy.x - f->last_xy.x,
+	f->xy.y - f->last_xy.y
+		};
+
+		float len2 = move.x * move.x + move.y * move.y;
+		if (len2 > 0.0001f) {
+			f->angle = atan2f(move.y, move.x) * RAD2DEG + 180.0f;
+		}
+
+
+	}
+}
+void create_bossfish(fishPool* pool, int kind, int count,int fishnumber)
+{
+	int created = 0;
+	Vector2 playeri = { player.xy.x + 1.3 * player.size,player.xy.y + 1.4 * player.size };
+	for (int i = 0; i <fishnumber&& created < count; i++) {
+		if (pool->used[i]) continue;
+
+		fish* f = &pool->fishnpc[i].fish;
+		Vector2 spawn = get_legal_point();
+		f->xy = spawn;
+		pool->used[i] = 1;
+		f->kinds = kind;
+		f->timer = 0.0f;
+		f->phase = 0;
+		f->threatsize = player.threatsize * (0.6f + rand() % 80 / 100.0f);
+		int r = rand() % 100;  // 0 ~ 99
+
+		if (r < 10) {
+			f->image_status = 0;          // 10%
+		}
+		else if (r < 20) {
+			f->image_status = 1;          // 10%
+		}
+		else if (r < 40) {
+			f->image_status = 2;          // 20%
+		}
+		else if (r < 60) {
+			f->image_status = 3;          // 20%
+		}
+		else if (r < 80) {
+			f->image_status = 4;          // 20%
+		}
+		else {
+			f->image_status = 5;          // 20%
+		}
+		Vector2 d = {
+			playeri.x - f->xy.x,
+			playeri.y - f->xy.y
+		};
+		float len = sqrtf(d.x * d.x + d.y * d.y);
+		if (len > 0.001f) {
+			d.x /= len;
+			d.y /= len;
+		}
+		// 101：放射型（略带散射）
+		if (kind == 101) {
+			float spread = ((rand() % 100) / 100.0f - 0.5f) * 0.5f;
+			float ca = cosf(spread);
+			float sa = sinf(spread);
+
+			float vx = d.x * ca - d.y * sa;
+			float vy = d.x * sa + d.y * ca;
+
+			f->v_xy.x = vx * 40.0f;
+			f->v_xy.y = vy * 40.0f;
+		}
+
+		// 102：环绕型（先慢速入场，update 中接管）
+		else if (kind == 102) {
+			f->v_xy.x = d.x * 20.0f;
+			f->v_xy.y = d.y * 20.0f;
+
+			// timer 用作初始环绕相位
+			f->timer = (float)(rand() % 360) * DEG2RAD;
+		}
+
+		// 103：残影型（缓慢、稳定）
+		else if (kind == 103) {
+			f->v_xy.x = d.x * 12.0f;
+			f->v_xy.y = d.y * 12.0f;
+		}
+
+		// ================= 初始朝向 =================
+		f->angle = atan2f(f->v_xy.y, f->v_xy.x) * RAD2DEG + 180.0f;
+
+		created++;
+	}
+}
+void DrawFishRotated(Texture2D tex, Vector2 pos, float size, float baseSize, Color tint, float rotation)
+{
+	Rectangle src = {
+		0,
+		0,
+		(float)tex.width,
+		(float)tex.height
+	};
+
+	float scale = size / (baseSize * sizetimes);
+
+	Rectangle dst = {
+		pos.x + size * 1.4f,  // 调整中心点
+		pos.y + size * 1.3f,
+		tex.width * scale,
+		tex.height * scale
+	};
+
+	Vector2 origin = {
+		dst.width * 0.5f,
+		dst.height * 0.5f
+	};
+
+	// 使用Raylib的DrawTexturePro进行旋转绘制
+	DrawTexturePro(
+		tex,
+		src,
+		dst,
+		origin,
+		rotation,  // 旋转角度
+		tint
+	);
+}
+
+// 增强的DrawFishAutoFlip，支持旋转参数
+void DrawFishAutoFlipEx(Texture2D tex_left, Vector2 pos, float size, float baseSize, Color tint, float vx, float rotation)
+{
+	Rectangle src = {
+		0,
+		0,
+		(float)tex_left.width,
+		(float)tex_left.height
+	};
+
+	// 根据水平速度决定是否翻转
+	if (vx > 0) { // 向右游 → 翻转
+		src.x = tex_left.width;
+		src.width = -src.width;
+	}
+
+	float scale = size / (baseSize * sizetimes);
+
+	Rectangle dst = {
+		pos.x + size * 1.4f,  // 调整中心点
+		pos.y + size * 1.3f,
+		tex_left.width * scale,
+		tex_left.height * scale
+	};
+
+	Vector2 origin = {
+		dst.width * 0.5f,
+		dst.height * 0.5f
+	};
+
+	DrawTexturePro(
+		tex_left,
+		src,
+		dst,
+		origin,
+		rotation,  // 旋转角度
+		tint
+	);
+}
+void collision_player_bossfish(fishPool* pool,int fishnumber)
+{
+	Vector2 p_center = {
+		player.xy.x + player.size * 1.4f,
+		player.xy.y + player.size * 1.3f
+	};
+
+	float p_radius = player.size;
+
+	for (int i = 0; i < fishnumber; i++) {
+		if (!pool->used[i]) continue;
+		fish* f = &pool->fishnpc[i].fish;
+		if (f->kinds < 100) continue;
+		Vector2 f_center = {
+			f->xy.x + f->size * 1.4f,
+			f->xy.y + f->size * 1.3f
+		};
+		float dx = p_center.x - f_center.x;
+		float dy = p_center.y - f_center.y;
+		float dist_sq = dx * dx + dy * dy;
+		float hit_r = p_radius + f->size;
+		if (dist_sq <= hit_r * hit_r) {
+			if (f->image_status == 0) {
+				player.a += 0.1f;
+				if (fishnumber > 1)
+					fishnumber--;
+				pool->used[i] = 0;
+			}
+			else {
+				for (int j = 0; j < fishnumber; j++) {
+					if (!pool->used[j]) continue;
+					if (pool->fishnpc[j].fish.kinds >= 100) {
+						pool->used[j] = 0;
+					}
+				}
+				san -= 10.0f;
+				if (san < 0) san = 0;
+				return;
+			}
+		}
+	}
+}
