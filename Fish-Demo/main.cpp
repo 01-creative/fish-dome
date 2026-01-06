@@ -85,7 +85,7 @@ static DepthTransition depthTrans = { 0, 0, 0, 0 };
 typedef enum {
 	UI_TITLE,
 	UI_PLAYING,
-	UI_DEAD,
+	UI_END,
 	UI_STOP,
 	UI_BOSS,
 	UI_SETTING
@@ -104,6 +104,7 @@ fish player = { {screen_length_x / 2,screen_length_y / 2},{0,0},5,30.0 * sizetim
 int difficult = 1.5, jieduan = 0;  double san = 100;
 int slow_timer = 0, super_slow_timer = 0,mutation=0, ate_mutant_fish=0,xianji=0;float fade = 1.0f;
 bool resetting = 0; 
+int ending_id = 0, compeletedending = 0, deadbymutation = 0, open_I = 0, finish_end0;//结局检查变量
 int collision_redundancy = 0,show_hitbox = 0,developer_mode=0;            //碰撞冗余， 显示碰撞箱,开发者模式
 
 void playermove(fish* player);
@@ -120,7 +121,7 @@ void draw_background1(void);
 void UI_Update(fishPool* pool);
 void UI_Draw(void);
 void UI_DrawTitle(void);
-void UI_DrawDead(void);
+void UI_DrawEnding(void);
 void draw_menu(void);
 void draw_settings_menu(void);
 void settings_menu_logic(void);
@@ -526,14 +527,13 @@ int main() {
 			
 			
 			if (running == 3) {
-				uiState = UI_DEAD;
+				uiState = UI_END;
 			}
 			break;
 		}
 
-		case UI_DEAD:
+		case UI_END:
 		{
-			uiState = UI_DEAD;
 			if (IsKeyPressed(KEY_ENTER)) {
 				uiState = UI_TITLE;
 				PollInputEvents();
@@ -551,15 +551,29 @@ int main() {
 				player.lizixiaoguo = 0;
 				player.kinds = 0;
 				selected = START;//UI数据
-				difficult = 1.5; jieduan = 0; san = 100.0f;
+				difficult = 1.5; jieduan = 0; san = 100.0f; deadbymutation = 0; open_I = 0;
 				slow_timer = 0; super_slow_timer = 0;if(!xianji) mutation = 0; if(!xianji)ate_mutant_fish = 0; fade = 1.0f; toumingdu = 0;
 				//全局变量初始化
 				init_fish_pool(&pool);
 				srand(time(NULL));//函数初始化
 				resetting = 1;//静态本地变量初始化
 			}
+			if (player.size < 35)ending_id = 12;
+			else if (compeletedending && finish_end0 && mutation <= 4)ending_id = 11;
+			else if (compeletedending && fade <= 0.6f)ending_id = 9;
+			else if (compeletedending)ending_id = 10;
+			else if (!compeletedending && open_I)ending_id = 8;
+			else if (xianji == 1)ending_id = 7;
+			else if (fade <= 0.0f)ending_id = 13;
+			else if (san <= 0.0f)ending_id = 5;
+			else if (ate_mutant_fish && jieduan >= 3)ending_id = 6;
+			else if (deadbymutation && jieduan >= 2)ending_id = 4;
+			else if (!deadbymutation && jieduan >= 2)ending_id = 3;
+			else if (jieduan == 1)ending_id = 2;
+			else if (jieduan == 0 && runingtime >= 10000 && san >= 100)ending_id = 0;
+			else if (jieduan == 0)ending_id = 1;
 			BeginDrawing();
-			UI_DrawDead();
+			UI_DrawEnding();
 			EndDrawing();
 		}
 			break;
@@ -590,7 +604,7 @@ int main() {
 		break;
 		case UI_BOSS://************************************************BOSS**************************************************************//
 		{
-
+			open_I = 1;
 			static Texture bossfish[6] = {player_tex[1],player_tex_by[2],player_gray_left,player_tex_by[3],player_tex_by[4],player_tex_by[5] };
 			if (developer_mode) {
 				if (runingtime % 10 == 0) {
@@ -782,6 +796,13 @@ int main() {
 				}else if (show_hitbox&&!developer_mode) {
 					if (IsKeyDown(KEY_Q))DrawText("The Knowledge Doesn't Delong To You", screen_length_x / 2 - 300, screen_length_y / 2, 30, RED);
 					
+				}
+				if (fishnumber == 0) {
+					compeletedending = 1;
+					static int endtime = 0;
+					endtime++;
+					DrawRectangle(0, 0, screen_length_x, screen_length_y, Fade(BLACK, 0.01f * endtime));
+					if (endtime > 100)uiState = UI_END;
 				}
 				EndDrawing();
 				runingtime++;
@@ -1345,6 +1366,7 @@ void collision_npc(fishPool* pool) {
 					player.size)) {
 
 					if (pool->fishnpc[i].fish.threatsize > player.threatsize) {
+						if (pool->fishnpc[i].fish.kinds >= 5)deadbymutation = 1;
 						if(!collision_redundancy)running = 3;
 						else if(pool->fishnpc[i].fish.threatsize > player.threatsize*1.05f)running = 3;
 					}
@@ -1841,8 +1863,53 @@ void UI_DrawTitle(void)
 		Fade(BLACK, 0.7f)
 	);
 }
-void UI_DrawDead(void)
+void UI_DrawEnding(void)
 {
+	typedef struct {
+		const char* title;   // 主标题
+		Color       color;   // 字体颜色
+		int         fontSize;// 字体大小
+	} EndingUI;
+	static const Color COLOR_ABYSS = { 160, 60, 60, 255 };
+	static const Color COLOR_GRAY = { 170, 170, 170, 255 };
+	static const Color COLOR_WHITE = { 220, 220, 220, 255 };
+	static const Color COLOR_MINT = { 180, 220, 180, 255 };
+	EndingUI ending_table[14] = {
+		// 0 最初的逝去
+		{ "The First Departure", COLOR_WHITE, 36 },
+		// 1 风和日丽
+		{ "Calm Waters", COLOR_GRAY, 34 },
+		// 2 帷幕一角
+		{ "A Corner of the Veil", COLOR_GRAY, 36 },
+		// 3 肉体凡胎
+		{ "Mortal Flesh", COLOR_GRAY, 36 },
+		// 4 深渊恐惧
+		{ "Fear of the Abyss", COLOR_GRAY, 40 },
+		// 5 世界向我走来（低 san）
+		{ "The World Draws Near", COLOR_ABYSS, 36 },
+		// 6 祂！
+		{ "The One.", COLOR_ABYSS, 44 },
+		// 7 必要的代价
+		{ "The Necessary Price", COLOR_GRAY, 36 },
+		// 8 我？
+		{ "Me?", COLOR_ABYSS, 40 },
+		// 9 结束了？
+		{ "Is It Over?", COLOR_WHITE, 34 },
+		// 10 祂在我体内苏醒了
+		{ "It Awakens Within Me", COLOR_ABYSS, 40 },
+		// 11 胜利？……值得吗？
+		{ "Triumph, Yet Nothing Remains… Was It Worth It?", COLOR_WHITE, 34 },
+		// 12 彩蛋：河豚
+		{ "Delicious, Yet Deadly", COLOR_MINT, 36 },
+		// 13 褪色者
+		{ "Tarnished", COLOR_WHITE, 36 }
+	};
+
+	if (ending_id < 0 || ending_id >= 13)
+		ending_id = 0;
+
+	EndingUI* e = &ending_table[ending_id];
+	//int size = e->fontSize + (rand() % 3 - 1);//跳动
 	DrawRectangle(
 		0,
 		0,
@@ -1852,25 +1919,17 @@ void UI_DrawDead(void)
 	);
 
 	DrawText(
-		"YOU DIED",
-		screen_length_x / 2 - 100,
-		screen_length_y / 2 - 60,
-		40,
-		RED
+		e->title,
+		screen_length_x / 2 - MeasureText(e->title, e->fontSize) / 2,
+		screen_length_y / 2 - e->fontSize / 2,
+		e->fontSize,
+		e->color
 	);
-
-	DrawText(
-		TextFormat("Score: %d", runingtime),
-		screen_length_x / 2 - 80,
-		screen_length_y / 2,
-		24,
-		WHITE
-	);
-
+	DrawText(TextFormat("Score: %d", runingtime), screen_length_x / 2 - 80, screen_length_y / 2+e->fontSize, 24, WHITE);
 	DrawText(
 		"PRESS ENTER TO RETURN",
 		screen_length_x / 2 - 160,
-		screen_length_y / 2 + 50,
+		screen_length_y / 2 + e->fontSize,
 		20,
 		GRAY
 	);
@@ -2526,8 +2585,6 @@ void DrawFishRotated(Texture2D tex, Vector2 pos, float size, float baseSize, Col
 		tint
 	);
 }
-
-// 增强的DrawFishAutoFlip，支持旋转参数
 void DrawFishAutoFlipEx(Texture2D tex_left, Vector2 pos, float size, float baseSize, Color tint, float vx, float rotation)
 {
 	Rectangle src = {
