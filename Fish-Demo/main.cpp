@@ -25,6 +25,9 @@ typedef enum {
 	SETTINGS_VOLUME,
 	SETTINGS_DIFFICULTY,
 	SETTINGS_RESOLUTION,
+	SETTINGS_COLLISION_REDUNDANCY, // 碰撞冗余
+	SETTINGS_SHOW_HITBOX,//碰撞箱
+	SETTINGS_Developer_Mode,
 	SETTINGS_BACK,
 	SETTINGS_COUNT
 } SettingsItem;
@@ -92,7 +95,8 @@ int  screen_length_x=1920,screen_length_y=1080,runingtime = 0;
 fish player = { {screen_length_x / 2,screen_length_y / 2},{0,0},5,30.0 * sizetimes,30.0 * sizetimes,0,0,0 };//玩家初始化
 int difficult = 1.5, jieduan = 0;  double san = 100;
 int slow_timer = 0, super_slow_timer = 0,mutation=0, ate_mutant_fish=0;float fade = 1.0f;
-bool resetting = 0;
+bool resetting = 0; 
+int collision_redundancy = 0,show_hitbox = 0,developer_mode=0;            //碰撞冗余， 显示碰撞箱,开发者模式
 
 void playermove(fish* player);
 void npc_move(fish_NPC* npc);
@@ -416,48 +420,52 @@ int main() {
 					break;
 				}
 
-				if (IsKeyDown(KEY_Q)) { // 调试用代码，显示碰撞箱与大小
-					Vector2 cj;
-					switch (pool.fishnpc[i].fish.kinds) {
-					case 2:
-					case 9:
-						cj.x = pool.fishnpc[i].fish.xy.x + pool.fishnpc[i].fish.size * 1.4;
-						cj.y = pool.fishnpc[i].fish.xy.y + pool.fishnpc[i].fish.size * 1.3;
-						break;
-					case 1:
-					case 3:
-					case 4:
-					case 5:
-					case 6:
-					case 7:
-					case 8:
-						cj.x = pool.fishnpc[i].fish.xy.x + pool.fishnpc[i].fish.size * 2;
-						cj.y = pool.fishnpc[i].fish.xy.y + pool.fishnpc[i].fish.size * 2;
-						break;
-					default:
-						cj.x = pool.fishnpc[i].fish.xy.x + pool.fishnpc[i].fish.size;
-						cj.y = pool.fishnpc[i].fish.xy.y + pool.fishnpc[i].fish.size;
-						break;
-					}
+				if(show_hitbox){
+					if (IsKeyDown(KEY_Q)) { // 调试用代码，显示碰撞箱与大小
+						Vector2 cj;
+						switch (pool.fishnpc[i].fish.kinds) {
+						case 2:
+						case 9:
+							cj.x = pool.fishnpc[i].fish.xy.x + pool.fishnpc[i].fish.size * 1.4;
+							cj.y = pool.fishnpc[i].fish.xy.y + pool.fishnpc[i].fish.size * 1.3;
+							break;
+						case 1:
+						case 3:
+						case 4:
+						case 5:
+						case 6:
+						case 7:
+						case 8:
+							cj.x = pool.fishnpc[i].fish.xy.x + pool.fishnpc[i].fish.size * 2;
+							cj.y = pool.fishnpc[i].fish.xy.y + pool.fishnpc[i].fish.size * 2;
+							break;
+						default:
+							cj.x = pool.fishnpc[i].fish.xy.x + pool.fishnpc[i].fish.size;
+							cj.y = pool.fishnpc[i].fish.xy.y + pool.fishnpc[i].fish.size;
+							break;
+						}
 
-					DrawCircle(cj.x, cj.y, pool.fishnpc[i].fish.size, RED);
-					DrawText(
-						TextFormat("Size: %.2f", pool.fishnpc[i].fish.threatsize),
-						cj.x,
-						cj.y,
-						24,
-						WHITE
-					);
+						DrawCircle(cj.x, cj.y, pool.fishnpc[i].fish.size, RED);
+						DrawText(
+							TextFormat("Size: %.2f", pool.fishnpc[i].fish.threatsize),
+							cj.x,
+							cj.y,
+							24,
+							WHITE
+						);
+					}
 				}
 			}
 			// NPC鱼渲染结束
 
 			// 注意：size_threshold数组已经在外部声明
-			if (runingtime % 10 == 0) {
-				printf("size:%.2f+threat:%.2f 阶段：%d 下阶段门槛：%lf time:%d san:%.3f fade:%.3f\n",
-					player.size, player.threatsize, jieduan,
-					((size_threshold[jieduan] * sizetimes) * san / 100),
-					runingtime, san, fade);
+			if(developer_mode){
+				if (runingtime % 10 == 0) {
+					printf("size:%.2f+threat:%.2f 阶段：%d 下阶段门槛：%lf time:%d san:%.3f fade:%.3f\n",
+						player.size, player.threatsize, jieduan,
+						((size_threshold[jieduan] * sizetimes) * san / 100),
+						runingtime, san, fade);
+				}
 			}
 
 			// 调试用代码，显示玩家大小和当前阶段
@@ -1153,7 +1161,8 @@ void collision_npc(fishPool* pool) {
 					player.size)) {
 
 					if (pool->fishnpc[i].fish.threatsize > player.threatsize) {
-						running = 3;
+						if(!collision_redundancy)running = 3;
+						else if(pool->fishnpc[i].fish.threatsize > player.threatsize*1.05f)running = 3;
 					}
 					else {//玩家吃掉NPC鱼
 						release_fish(pool, &pool->fishnpc[i]);
@@ -1200,8 +1209,10 @@ void draw_background1(void)
 {
 	static int start = 0;
 	static float bg1_x = 0, bg2_x = 0,bg3_x = 0,bg4_x = 0;//背景偏移量
-	if(resetting) bg1_x = 0; bg2_x = 0;bg3_x = 0;bg4_x = 0;
-	static Texture bg1, bg2, bg3, bg4, bg5;//背景贴图
+	
+	if (resetting) { bg1_x = 0; bg2_x = 0; bg3_x = 0; bg4_x = 0; }
+	
+	static Texture bg1, bg2, bg3, bg4, bg5;
 	if (!start) {
 		bg1 = LoadTexture("../img/bg/Background1.png"); bg2 = LoadTexture("../img/bg/Background2.png"); bg3 = LoadTexture("../img/bg/Background3.png"); bg4 = LoadTexture("../img/bg/Background4.png"); bg5 = LoadTexture("../img/bg/Background6.png");
 		start = 1;
@@ -1226,8 +1237,6 @@ void draw_background1(void)
 	}
 
 	float yOffset = -depthTrans.shift;
-
-
 	float scale1 = (float)screen_length_y / bg1.height;
 	float scale2 = (float)screen_length_y / bg2.height;
 	float scale3 = (float)screen_length_y / bg3.height;
@@ -1439,10 +1448,10 @@ void draw_player_glow()
 	}
 	else if (mutation < 5) {
 		/* 阶段 3：冷白偏青 */
-		c1.r = 200; c1.g = 230; c1.b = 255;
+		c1.r = 200; c1.g = 260; c1.b = 255;
 		c1.a = (unsigned char)(baseAlpha * 0.65f);
 
-		c2.r = 150; c2.g = 200; c2.b = 255;
+		c2.r = 150; c2.g = 220; c2.b = 255;
 		c2.a = (unsigned char)(baseAlpha * 0.4f);
 
 		c3.r = 110; c3.g = 160; c3.b = 230;
@@ -1724,6 +1733,9 @@ void draw_settings_menu(void) {
 		"VOLUME",
 		"DIFFICULTY",
 		"RESOLUTION",
+	"REDUNDANCY",  
+	"SHOW HITBOX",  
+	"DEVELOPER MODE",
 		"BACK"
 	};
 
@@ -1812,6 +1824,19 @@ void draw_settings_menu(void) {
 		case SETTINGS_RESOLUTION:
 			valueText = resolutionTexts[game_resolution];
 			break;
+		case SETTINGS_COLLISION_REDUNDANCY:
+			// ← 这里只负责“显示状态”，不改逻辑
+			valueText = collision_redundancy ? "ON" : "OFF";
+			break;
+
+		case SETTINGS_SHOW_HITBOX:
+			// ← 显示当前是否开启碰撞箱
+			valueText = show_hitbox ? "ON" : "OFF";
+			break;
+		case SETTINGS_Developer_Mode:
+			// ← 显示当前是否开启碰撞箱
+			valueText = developer_mode ? "ON" : "OFF";
+			break;
 
 		case SETTINGS_BACK:
 			valueText = "";
@@ -1860,9 +1885,6 @@ void draw_settings_menu(void) {
 	DrawText("USE ARROW KEYS TO NAVIGATE, LEFT/RIGHT TO ADJUST, ENTER TO CONFIRM",
 		(screen_length_x - MeasureText("USE ARROW KEYS TO NAVIGATE, LEFT/RIGHT TO ADJUST, ENTER TO CONFIRM", 20)) / 2,
 		screen_length_y - 60, 20, LIGHTGRAY);
-	DrawText("ESC TO RETURN",
-		(screen_length_x - MeasureText("ESC TO RETURN", 20)) / 2,
-		screen_length_y - 30, 20, LIGHTGRAY);
 }
 void settings_menu_logic(void) {
 	/*while (settings_end && !WindowShouldClose())*/ {
@@ -1913,9 +1935,11 @@ void settings_menu_logic(void) {
 				game_difficulty += direction;
 				if (game_difficulty < 0) game_difficulty = 0;
 				if (game_difficulty > 2) game_difficulty = 2;
+				difficult = 0.7 + 0.5* game_difficulty;
 				break;
 
 			case SETTINGS_RESOLUTION:
+			{
 				int oldResolution = game_resolution;
 				game_resolution += direction;
 				if (game_resolution < 0) game_resolution = 0;
@@ -1955,7 +1979,28 @@ void settings_menu_logic(void) {
 					EndDrawing();
 					WaitTime(0.3);
 				}
+			}
 				break;
+			case SETTINGS_COLLISION_REDUNDANCY:
+			{
+				// ← 在这里修改“碰撞冗余”的全局变量
+				collision_redundancy = !collision_redundancy;
+			}
+				break;
+
+			case SETTINGS_SHOW_HITBOX:
+			{
+				// ← 在这里修改“显示碰撞箱”的全局变量
+				show_hitbox = !show_hitbox;
+				break;
+			}
+			case SETTINGS_Developer_Mode:
+			{
+				// ← 在这里修改“开发者模式”的全局变量
+				developer_mode = !developer_mode;
+				break;
+			}
+
 			}
 		}
 
