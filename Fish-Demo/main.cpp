@@ -1,3 +1,4 @@
+#define _CRT_SECURE_NO_WARNINGS
 
 #include <raylib.h>
 #include <time.h>
@@ -90,14 +91,9 @@ typedef enum {
 	UI_BOSS,
 	UI_SETTING
 } UIState;
-
 UIState uiState = UI_TITLE;
 int ui_menu_index = 0;
-
-
-
 MenuItem selected = START;//UI数据
-
 int running = 1;//0是退出，1是正常，2是暂停，3是死亡
 int  screen_length_x=1920,screen_length_y=1080,runingtime = 0;
 fish player = { {screen_length_x / 2,screen_length_y / 2},{0,0},5,30.0 * sizetimes,30.0 * sizetimes,0,0,0 };//玩家初始化
@@ -148,6 +144,25 @@ void create_bossfish(fishPool* pool, int kind, int count,int);
 void DrawFishRotated(Texture2D tex, Vector2 pos, float size, float baseSize, Color tint, float rotation);
 void DrawFishAutoFlipEx(Texture2D tex_left, Vector2 pos, float size, float baseSize, Color tint, float vx, float rotation);
 void collision_player_bossfish(fishPool* pool, int *fishnumber);
+void LoadSave(void)
+{FILE* f = fopen("save.dat", "r");
+	if (!f) return; 
+	int sx, sf, sc;
+	sx = sf = sc = 0;
+	fscanf(f, "xianji=%d\n", &sx);
+	fscanf(f, "finish_end0=%d\n", &sf);
+	fscanf(f, "compeletedending=%d\n", &sc);
+	fclose(f);
+}
+void SaveGame(void)
+{
+	FILE* f = fopen("save.dat", "w");
+	if (!f) return;
+	fprintf(f, "xianji=%d\n", xianji);
+	fprintf(f, "finish_end0=%d\n", finish_end0);
+	fprintf(f, "compeletedending=%d\n", compeletedending);
+	fclose(f);
+}
 
 
 int main() {
@@ -221,14 +236,22 @@ int main() {
 		230, // 3 -> 4
 		320  // 4 -> 5
 	};
-
+	LoadSave();
 	//**************************************************************主循环********************************************************************//
 	while (!WindowShouldClose()) {
+		
 		static Texture stop_sight;
 		switch (uiState) {
 		case UI_TITLE:
 		{
-			
+			if (compeletedending && finish_end0) {
+				BeginDrawing();
+				DrawText("The story of the sea had overed.", screen_length_x / 2 - 200, screen_length_y / 2, 50, RED);
+				EndDrawing();
+				WaitTime(5);
+				CloseWindow();
+				return 0;
+			}
 			const char* menuTexts[COUNT] = {
 				"START",
 				"SETTINGS",
@@ -324,11 +347,13 @@ int main() {
 						if (xianji == 0) {
 							xianji = 1;
 							running = 3;
+							SaveGame();
 						}
 						else {
 							xianji = 0;
 							player.threatsize = 60;
 							uiState = UI_BOSS;
+							SaveGame();
 						}
 					}
 				}
@@ -558,7 +583,7 @@ int main() {
 				Vector2 origin = { 0, 0 };
 				DrawTexturePro(jitan, src, dst, origin, 0.0f, a);
 			}
-
+			
 			runingtime++;
 			san += 0.0001;
 			san -= 0.001 * jieduan*jieduan;
@@ -566,7 +591,52 @@ int main() {
 			if (!isPaused && uiState == UI_PLAYING) {
 				DrawText("Press SPACE to pause", 10, 10, 20, WHITE);
 			}
+			//渲染Tips
+			{
+				const char* tip = NULL;
 
+				if (jieduan < 2) {
+					static const char* tips_stage0_3[] = {
+	"Swordfish are more dangerous than they look.",
+	"Have you noticed the sharks?",
+	"Swordfish are the fastest swimmers in the sea.",
+	"They do not favor vertical movement.",
+	"Remember: there is only one of you.",
+	"Beware of inertia.",
+	"Eating grants a slight acceleration.",
+	"Have you ever eaten a pufferfish?",
+	"Pufferfish are cute when inflated... and toxic.",
+	"Uninflated pufferfish may sharpen your mind."
+					};
+
+
+					int count = sizeof(tips_stage0_3) / sizeof(tips_stage0_3[0]);
+					tip = tips_stage0_3[(runingtime / 180) % count];
+				}
+				else {
+					static const char* tips_stage2_plus[] = {
+	"The contamination is spreading.",
+	"Do not underestimate Its limbs.",
+	"The toxin of pale pufferfish is almost irreversible.",
+	"Fighting poison with poison may grant a moment of clarity.",
+	"I have become Death, the destroyer of worlds."
+					};
+
+
+					int count = sizeof(tips_stage2_plus) / sizeof(tips_stage2_plus[0]);
+					tip = tips_stage2_plus[(runingtime / 240) % count];
+				}
+
+				if (tip) {
+					int fontSize = 25;
+					int textWidth = MeasureText(tip, fontSize);
+
+					int x = screen_length_x / 2 - textWidth / 2;
+					int y = screen_length_y - 40;
+
+					DrawText(tip, x, y, fontSize, Fade(WHITE, 0.75f));
+				}
+			}
 			DrawText(
 				TextFormat("Score: %d", runingtime),
 				20,
@@ -574,8 +644,6 @@ int main() {
 				24,
 				WHITE
 			);
-
-			
 			EndDrawing();
 
 		 runingtime++;
@@ -590,6 +658,7 @@ int main() {
 
 		case UI_END:
 		{
+			SaveGame();
 			if (IsKeyPressed(KEY_ENTER)) {
 				uiState = UI_TITLE;
 				PollInputEvents();
@@ -628,6 +697,8 @@ int main() {
 			else if (jieduan == 1)ending_id = 2;
 			else if (jieduan == 0 && runingtime >= 10000 && san >= 100)ending_id = 0;
 			else if (jieduan == 0)ending_id = 1;
+			if (ending_id == 0)finish_end0 = 1; 
+			SaveGame();
 			BeginDrawing();
 			UI_DrawEnding();
 			EndDrawing();
@@ -862,7 +933,7 @@ int main() {
 					
 				}
 				if (fishnumber == 0) {
-					compeletedending = 1;
+					compeletedending = 1; SaveGame();
 					static int endtime = 0;
 					endtime++;
 					DrawRectangle(0, 0, screen_length_x, screen_length_y, Fade(BLACK, 0.01f * endtime));
