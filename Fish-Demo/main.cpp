@@ -688,7 +688,7 @@ int main() {
 			else if (compeletedending && fade <= 0.6f)ending_id = 9;
 			else if (compeletedending)ending_id = 10;
 			else if (!compeletedending && open_I)ending_id = 8;
-			else if (xianji == 1)ending_id = 7;
+			else if (xianji == 1&&jieduan==5)ending_id = 7;
 			else if (fade <= 0.0f)ending_id = 13;
 			else if (san <= 0.0f)ending_id = 5;
 			else if (ate_mutant_fish && jieduan >= 3)ending_id = 6;
