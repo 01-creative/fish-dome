@@ -147,7 +147,7 @@ void update_all_bossfish(fishPool* pool,int);
 void create_bossfish(fishPool* pool, int kind, int count,int);
 void DrawFishRotated(Texture2D tex, Vector2 pos, float size, float baseSize, Color tint, float rotation);
 void DrawFishAutoFlipEx(Texture2D tex_left, Vector2 pos, float size, float baseSize, Color tint, float vx, float rotation);
-void collision_player_bossfish(fishPool* pool, int fishnumber);
+void collision_player_bossfish(fishPool* pool, int *fishnumber);
 
 
 int main() {
@@ -292,7 +292,7 @@ int main() {
 
 		case UI_PLAYING:
 		{
-			if (IsKeyPressed(KEY_SPACE)) {
+			if (IsKeyDown(KEY_SPACE)) {
 				Image stop_img = LoadImageFromScreen();
 				static bool IF_img_used = 0;
 				if (IF_img_used) UnloadTexture(stop_sight);
@@ -323,6 +323,7 @@ int main() {
 						// 祭坛检查逻辑
 						if (xianji == 0) {
 							xianji = 1;
+							running = 3;
 						}
 						else {
 							xianji = 0;
@@ -485,12 +486,67 @@ int main() {
 						runingtime, san, fade);
 				}
 			}
-
-			// 调试用代码，显示玩家大小和当前阶段
 			if (jieduan == 5) {
 				if (toumingdu < 1.0f)
 					toumingdu = (toumingdu + 0.005f < 1.0f) ? toumingdu + 0.005f : 1.0f;
+				if(xianji){
+					float h = screen_length_y;   // 光柱高度
+					float base_y = screen_length_y - h;
+					float alpha_light = sinf(runingtime) * 0.1 + 1.0;
+					Color c1 = { 120, 20, 20, (unsigned char)40 * alpha_light*toumingdu };
+					Color c2 = { 160, 30, 30, (unsigned char)70 * alpha_light*toumingdu };
+					Color c3 = { 200, 60, 60,(unsigned char)110 * alpha_light*toumingdu };
 
+					// 最外层柔光（很淡）
+					DrawRectangle(
+						screen_length_x / 2 - 50-10, base_y,
+						100, h,
+						c1
+					);
+
+					// 中层
+					DrawRectangle(
+						screen_length_x / 2 - 40-10, base_y,
+						80, h,
+						c2
+					);
+
+					// 核心亮部
+					DrawRectangle(
+						screen_length_x / 2 - 25-10, base_y,
+						50, h,
+						c3
+					);
+				}
+				else {
+					float h = screen_length_y;   // 光柱高度
+					float base_y = screen_length_y - h;
+					float alpha_light = sinf(runingtime) * 0.1 + 1.0;
+					Color c1 = { 120, 20, 20, (unsigned char)40 * alpha_light * toumingdu };
+					Color c2 = { 160, 30, 30, (unsigned char)70 * alpha_light * toumingdu };
+					Color c3 = { 200, 60, 60,(unsigned char)110 * alpha_light * toumingdu };
+
+					// 最外层柔光（很淡）
+					DrawRectangle(
+						screen_length_x / 2 - 12 - 10, base_y,
+						24, h,
+						c1
+					);
+
+					// 中层
+					DrawRectangle(
+						screen_length_x / 2 - 7 - 10, base_y,
+						14, h,
+						c2
+					);
+
+					// 核心亮部
+					DrawRectangle(
+						screen_length_x / 2 - 3 - 10, base_y,
+						6, h,
+						c3
+					);
+				}
 				Color a = { 255, 255, 255, (unsigned char)(toumingdu * 255) };
 				Rectangle src = { 0, 0, (float)jitan.width, (float)jitan.height };
 				Rectangle dst = {
@@ -621,20 +677,20 @@ int main() {
 			static int   boss_wave_loop = 0;
 			// ================= BOSS Wave 调度 =================
 			boss_wave_timer += 0.02f;
-			static int fishnumber =(int) (ate_mutant_fish + 1) / (san * 3);
+			static int fishnumber =(int) (ate_mutant_fish ) *100/ (san * 7)*difficult+1;
 			switch (boss_wave_phase)
 			{
 			case 0:
-				// 第一拍：纯放射，给玩家建立节奏
-				create_bossfish(&pool, 101, 4 + boss_wave_loop,fishnumber);
+				// 第一拍
+				create_bossfish(&pool, 101, (4 + boss_wave_loop / 2)*difficult, fishnumber);
 				boss_wave_phase = 1;
 				boss_wave_timer = 0;
 				break;
 
 			case 1:
 				// 停顿（呼吸）
-				if (boss_wave_timer > 0.9f) {
-					create_bossfish(&pool, 103, 2 + boss_wave_loop / 2,fishnumber);
+				if (boss_wave_timer > 0.6f) {
+					create_bossfish(&pool, 103, (2 + boss_wave_loop / 2)*difficult, fishnumber);
 					boss_wave_phase = 2;
 					boss_wave_timer = 0;
 				}
@@ -642,8 +698,8 @@ int main() {
 
 			case 2:
 				// 环绕登场
-				if (boss_wave_timer > 1.6f) {
-					create_bossfish(&pool, 102, min(3 + boss_wave_loop,6), fishnumber);
+				if (boss_wave_timer > 1.8f) {
+					create_bossfish(&pool, 102, min(3 + boss_wave_loop/1.5,6)*difficult, fishnumber);
 					boss_wave_phase = 3;
 					boss_wave_timer = 0;
 				}
@@ -652,7 +708,7 @@ int main() {
 			case 3:
 				// 混合压迫
 				if (boss_wave_timer > 1.8f) {
-					create_bossfish(&pool, 101, 3,fishnumber);
+					create_bossfish(&pool, 101, 4,fishnumber);
 					create_bossfish(&pool, 103, 3,fishnumber);
 					boss_wave_phase = 4;
 					boss_wave_timer = 0;
@@ -661,7 +717,7 @@ int main() {
 
 			case 4:
 				// 收束 / 空拍
-				if (boss_wave_timer > 2.0f) {
+				if (boss_wave_timer > 2.2f) {
 					boss_wave_phase = 0;
 					boss_wave_loop++;
 					boss_wave_timer = 0;
@@ -671,7 +727,7 @@ int main() {
 			if (boss_wave_loop > 5)
 				boss_wave_loop = 5;
 			update_all_bossfish(&pool,fishnumber);
-			collision_player_bossfish(&pool, fishnumber);
+			collision_player_bossfish(&pool, &fishnumber);
 
 			BeginDrawing();
 			ClearBackground(BLACK);
@@ -754,9 +810,17 @@ int main() {
 					bossTint.g = (unsigned char)(bossTint.g * brightness);
 					bossTint.b = (unsigned char)(bossTint.b * brightness);
 				}
-				else{
+				else if (f->kinds == 101) {
 					tex_to_use = &bossfish[f->image_status];
-					//Color black = { 255,255,255,140 };
+					Color white = { 230,230,230,200 };
+					bossTint = white;
+					bossTint.r = (unsigned char)(bossTint.r * brightness);
+					bossTint.g = (unsigned char)(bossTint.g * brightness);
+					bossTint.b = (unsigned char)(bossTint.b * brightness);
+				}
+				else {
+					tex_to_use = &bossfish[f->image_status];
+					/*Color red = { 255,255,255,255 };*/
 					bossTint = WHITE;
 					bossTint.r = (unsigned char)(bossTint.r * brightness);
 					bossTint.g = (unsigned char)(bossTint.g * brightness);
@@ -790,7 +854,7 @@ int main() {
 			}
 			// BOSS鱼渲染结束
 
-				if (IsKeyPressed(KEY_SPACE)) {
+				if (IsKeyDown(KEY_SPACE)) {
 					DrawText("The Power Doesn't Delong To You", screen_length_x / 2 - 300, screen_length_y / 2, 30, RED);
 					
 				}else if (show_hitbox&&!developer_mode) {
@@ -806,6 +870,10 @@ int main() {
 				}
 				EndDrawing();
 				runingtime++;
+				if (running == 3) {
+					uiState = UI_END;
+				}
+				break;
 		}
 		break;
 		}
@@ -954,8 +1022,9 @@ void playermove(fish* player) {
 	{
 		player->xy.y = (screen_length_y - player->size); player->v_xy.y = 0.1;
 	}
-
-
+	if (fade <= 0.0001f)running = 3;
+	if (san <= 0.0001f)running = 3;
+	if (player->size <= 35.0f)running = 3;
 }
 void init_fish_pool(fishPool* pool) {
 	for (int i = 0; i < MAX_fish; i++) {
@@ -1929,7 +1998,7 @@ void UI_DrawEnding(void)
 	DrawText(
 		"PRESS ENTER TO RETURN",
 		screen_length_x / 2 - 160,
-		screen_length_y / 2 + e->fontSize,
+		screen_length_y / 2 + e->fontSize+40,
 		20,
 		GRAY
 	);
@@ -2491,11 +2560,8 @@ void create_bossfish(fishPool* pool, int kind, int count,int fishnumber)
 		f->threatsize = player.threatsize * (0.6f + rand() % 80 / 100.0f);
 		int r = rand() % 100;  // 0 ~ 99
 
-		if (r < 10) {
-			f->image_status = 0;          // 10%
-		}
-		else if (r < 20) {
-			f->image_status = 1;          // 10%
+		if (r < 20) {
+			f->image_status = 0;          // 20%
 		}
 		else if (r < 40) {
 			f->image_status = 2;          // 20%
@@ -2623,7 +2689,7 @@ void DrawFishAutoFlipEx(Texture2D tex_left, Vector2 pos, float size, float baseS
 		tint
 	);
 }
-void collision_player_bossfish(fishPool* pool,int fishnumber)
+void collision_player_bossfish(fishPool* pool,int *fishnumber)
 {
 	Vector2 p_center = {
 		player.xy.x + player.size * 1.4f,
@@ -2632,7 +2698,7 @@ void collision_player_bossfish(fishPool* pool,int fishnumber)
 
 	float p_radius = player.size;
 
-	for (int i = 0; i < fishnumber; i++) {
+	for (int i = 0; i < *fishnumber; i++) {
 		if (!pool->used[i]) continue;
 		fish* f = &pool->fishnpc[i].fish;
 		if (f->kinds < 100) continue;
@@ -2647,14 +2713,15 @@ void collision_player_bossfish(fishPool* pool,int fishnumber)
 		if (dist_sq <= hit_r * hit_r) {
 			if (f->image_status == 0) {
 				player.a += 0.1f;
-				if (fishnumber > 1)
-					fishnumber--;
+				san += 5;
+				if (*fishnumber >= 1)
+					(*fishnumber)--;
 				pool->used[i] = 0;
 			}
 			else {
-				for (int j = 0; j < fishnumber; j++) {
+				for (int j = 0; j < *fishnumber; j++) {
 					if (!pool->used[j]) continue;
-					if (pool->fishnpc[j].fish.kinds >= 100) {
+					if (pool->fishnpc[j].fish.kinds >= 100&&pool->fishnpc[j].fish.image_status!=0) {
 						pool->used[j] = 0;
 					}
 				}
