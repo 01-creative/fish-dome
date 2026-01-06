@@ -135,6 +135,7 @@ void playermutation(void);
 static float sign_point(Vector2 p1, Vector2 p2, Vector2 p3);
 static int point_in_triangle(Vector2 pt, Vector2 v1, Vector2 v2, Vector2 v3);
 int check_jitan_sacrifice(Texture jitan);
+void draw_menu(void);
 
 int main() {
 	screen_length_x = 2048;
@@ -159,137 +160,109 @@ int main() {
 	);
 
 	// ================= 玩家贴图 =================
-	{
-		Texture player_tex[2] = {
-			LoadTexture("../img/fish/玩家 左向 模糊.png"),
-			LoadTexture("../img/fish/玩家 左向 清晰.png")
-		};
-		Texture player_gray_left =
-			LoadTexture("../img/fish/玩家 灰度 左向.png");
-		Texture player_tex_by[6] = {
-			LoadTexture("../img/fish/玩家 变异1 左向.png"),
-			LoadTexture("../img/fish/玩家 变异2 左向.png"),
-			LoadTexture("../img/fish/玩家 变异3 左向.png"),
-			LoadTexture("../img/fish/玩家 变异4 左向.png"),
-			LoadTexture("../img/fish/玩家 变异5 左向.png"),
-			LoadTexture("../img/fish/玩家 变异6 左向.png")
-		};
-	}
+
+	Texture player_tex[2] = {
+		LoadTexture("../img/fish/玩家 左向 模糊.png"),
+		LoadTexture("../img/fish/玩家 左向 清晰.png")
+	};
+	Texture player_gray_left =
+		LoadTexture("../img/fish/玩家 灰度 左向.png");
+	Texture player_tex_by[6] = {
+		LoadTexture("../img/fish/玩家 变异1 左向.png"),
+		LoadTexture("../img/fish/玩家 变异2 左向.png"),
+		LoadTexture("../img/fish/玩家 变异3 左向.png"),
+		LoadTexture("../img/fish/玩家 变异4 左向.png"),
+		LoadTexture("../img/fish/玩家 变异5 左向.png"),
+		LoadTexture("../img/fish/玩家 变异6 左向.png")
+	};
+
 
 	// ================= NPC 鱼贴图 =================
-	{
-		Texture xiaochouyu_left =
-			LoadTexture("../img/fish/小丑鱼 左向.png");
 
-		Texture hetun_left =
-			LoadTexture("../img/fish/河豚 左向.png");
-		Texture hetun_puffed_left =
-			LoadTexture("../img/fish/河豚 鼓起 左向.png");
+	Texture xiaochouyu_left =
+		LoadTexture("../img/fish/小丑鱼 左向.png");
 
-		Texture jianyu_left =
-			LoadTexture("../img/fish/剑鱼 左向.png");
-		Texture jianyu_b1_left =
-			LoadTexture("../img/fish/剑鱼 变异1 左向.png");
-		Texture jianyu_b2_left =
-			LoadTexture("../img/fish/剑鱼 变异2 左向.png");
+	Texture hetun_left =
+		LoadTexture("../img/fish/河豚 左向.png");
+	Texture hetun_puffed_left =
+		LoadTexture("../img/fish/河豚 鼓起 左向.png");
 
-		Texture shayu_left =
-			LoadTexture("../img/fish/鲨鱼 左向.png");
-		Texture shayu_b1_left =
-			LoadTexture("../img/fish/鲨鱼 变异1 左向.png");
-		Texture shayu_b2_left =
-			LoadTexture("../img/fish/鲨鱼 变异2 左向.png");
+	Texture jianyu_left =
+		LoadTexture("../img/fish/剑鱼 左向.png");
+	Texture jianyu_b1_left =
+		LoadTexture("../img/fish/剑鱼 变异1 左向.png");
+	Texture jianyu_b2_left =
+		LoadTexture("../img/fish/剑鱼 变异2 左向.png");
 
-		Texture hetun_b1_left =
-			LoadTexture("../img/fish/河豚 变异1 左向.png");
-		Texture hetun_puffed_b1_left =
-			LoadTexture("../img/fish/河豚 鼓起 变异1 左向.png");
-		Texture jitan =
-			LoadTexture("../img/other/祭坛.png");
-	}
+	Texture shayu_left =
+		LoadTexture("../img/fish/鲨鱼 左向.png");
+	Texture shayu_b1_left =
+		LoadTexture("../img/fish/鲨鱼 变异1 左向.png");
+	Texture shayu_b2_left =
+		LoadTexture("../img/fish/鲨鱼 变异2 左向.png");
 
-	while (0) {
-	start:
-
-		ui_menu_index = 0;
-		ui_score = 0;
-		running = 1;//0是退出，1是正常，2是暂停，3是死亡
-		sleeptime = 100;
-		screen_length_x = 2048;
-		screen_length_y = 1152;
-		runingtime = 0;
-		player.xy.x = screen_length_x / 2;
-		player.xy.y = screen_length_y / 2;
-		player.v_xy.x = 0;
-		player.v_xy.y = 0;
-		player.a = 5;
-		player.size = 30 * sizetimes;
-		player.image_status = 0;
-		player.lizixiaoguo = 0;
-		player.kinds = 0;
-		bg1_x = 0;
-		bg2_x = 0;
-		bg3_x = 0;
-		bg4_x = 0;//背景偏移量
-	}
+	Texture hetun_b1_left =
+		LoadTexture("../img/fish/河豚 变异1 左向.png");
+	Texture hetun_puffed_b1_left =
+		LoadTexture("../img/fish/河豚 鼓起 变异1 左向.png");
+	Texture jitan =
+		LoadTexture("../img/other/祭坛.png");
 
 	SetWindowState(FLAG_VSYNC_HINT);
 	fishPool pool;
 	init_fish_pool(&pool);
 	srand(time(NULL));
+
+	
+	static Rectangle buttons[COUNT]; 
+	static float toumingdu = 0;       
+	static int size_threshold[] = {   
+		55,  // jieduan 0 -> 1
+		95,  // 1 -> 2
+		140, // 2 -> 3
+		230, // 3 -> 4
+		320  // 4 -> 5
+	};
+
 	//**************************************************************主循环********************************************************************//
 	while (!WindowShouldClose()) {
-
-
-		switch (uiState)
-		{
+		static Texture stop_sight;
+		switch (uiState) {
 		case UI_TITLE:
 		{
-			PollInputEvents();
-
-			static Rectangle buttons[COUNT];
+			
 			const char* menuTexts[COUNT] = {
 				"START",
 				"SETTINGS",
 				"EXIT"
 			};
-
-			// 计算居中位置
 			float buttonWidth = 300.0f;
 			float buttonHeight = 80.0f;
 			float buttonSpacing = 30.0f;
-
-			// 计算总高度
 			float totalHeight = COUNT * buttonHeight + (COUNT - 1) * buttonSpacing;
-
-			// 垂直居中计算
 			float startY = (screen_length_y - totalHeight) / 2.0f;
-
-			// 水平居中计算
 			float startX = (screen_length_x - buttonWidth) / 2.0f;
-
-			// 初始化按钮位置
 			Rectangle a = { startX, startY, buttonWidth, buttonHeight };
 			Rectangle b = { startX, startY + buttonHeight + buttonSpacing, buttonWidth, buttonHeight };
 			Rectangle c = { startX, startY + 2 * (buttonHeight + buttonSpacing), buttonWidth, buttonHeight };
 			buttons[START] = a;
 			buttons[SETTINGS] = b;
 			buttons[EXIT] = c;
-
-			// 获取鼠标位置
 			Vector2 mouse = GetMousePosition();
-
-			// 鼠标控制
 			for (int i = 0; i < COUNT; i++) {
 				if (CheckCollisionPointRec(mouse, buttons[i]) && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
 					if (selected == (MenuItem)i) {
-						menu_end = 0;
+						if (selected == START) {
+							uiState = UI_PLAYING;
+							running = 1;
+						}
+						else if (selected == SETTINGS) {
+							uiState = UI_SETTING;
+						}
 					}
 					selected = (MenuItem)i;
 				}
 			}
-
-			// 键盘控制
 			if (IsKeyPressed(KEY_DOWN)) {
 				selected = (MenuItem)(((int)selected + 1) % COUNT);
 			}
@@ -297,24 +270,31 @@ int main() {
 				selected = (MenuItem)(((int)selected - 1 + COUNT) % COUNT);
 			}
 			if (IsKeyPressed(KEY_ENTER)) {
-				menu_end = 0;
-			}
-
-			// 根据选择执行动作
-			if (menu_end == 0) {
 				if (selected == START) {
 					uiState = UI_PLAYING;
 					running = 1;
 				}
 				else if (selected == SETTINGS) {
 					uiState = UI_SETTING;
+					settings_selected = SETTINGS_VOLUME;
+				}
+				else if (selected == EXIT) {
+					CloseWindow();
+					return 0;
 				}
 			}
+			
+			
+			BeginDrawing();
+			draw_menu();       
+			EndDrawing();
+
+			break;
 		}
-					break;
+
 		case UI_PLAYING:
 		{
-
+			uiState = UI_PLAYING;
 			change_difficult(&pool);
 			playermove(&player);
 			playermutation();
@@ -327,14 +307,16 @@ int main() {
 			draw_depth_filter();
 			draw_player_glow();
 			draw_fish_glow(&pool);
-			static float toumingdu = 0;
+
+			// 注意：toumingdu已经在外部声明，这里直接使用
 			if (jieduan == 5) {
 				if (toumingdu >= 0.95) {
 					if (check_jitan_sacrifice(jitan)) {
-
+						// 祭坛检查逻辑
 					}
 				}
 			}
+
 			float t = depthTrans.tone;
 			t = t * t;   // 和光圈一致
 
@@ -346,7 +328,7 @@ int main() {
 
 			Color fishTint = { v, v, v, 255 };
 
-			//渲染玩家鱼
+			// 渲染玩家鱼
 			Color stateTint = WHITE;
 
 			// 如果中毒（减速中）
@@ -354,13 +336,16 @@ int main() {
 				Color green = { 180, 255, 180, 255 };
 				stateTint = green;  // 淡绿色
 			}
+
 			Color playerTint = {
 				(unsigned char)(stateTint.r * brightness),
 				(unsigned char)(stateTint.g * brightness),
 				(unsigned char)(stateTint.b * brightness),
 				(unsigned char)(255 * fade)
 			};
+
 			Color grayTint = { v, v, v, 255 };
+
 			// ================= 玩家灰度底 =================
 			DrawFishAutoFlip(
 				player_gray_left,
@@ -393,9 +378,9 @@ int main() {
 					player.v_xy.x
 				);
 			}
-			//玩家渲染结束
+			// 玩家渲染结束
 
-			//渲染所有NPC鱼
+			// 渲染所有NPC鱼
 			for (int i = 0; i < MAX_fish; i++) {
 				if (!pool.used[i]) continue;
 
@@ -405,58 +390,45 @@ int main() {
 				case 1:
 					DrawFishAutoFlip(xiaochouyu_left, f->xy, f->size, 24.0f, fishTint, f->v_xy.x);
 					break;
-
 				case 2:
 					DrawFishAutoFlip(
 						f->image_status == 2 ? hetun_puffed_left : hetun_left,
 						f->xy, f->size, 28.0f, fishTint, f->v_xy.x
 					);
 					break;
-
 				case 3:
 					DrawFishAutoFlip(jianyu_left, f->xy, f->size, 18.0f, fishTint, f->v_xy.x);
 					break;
-
 				case 4:
 					DrawFishAutoFlip(shayu_left, f->xy, f->size, 20.0f, fishTint, f->v_xy.x);
 					break;
-
 				case 5:
 					DrawFishAutoFlip(jianyu_b1_left, f->xy, f->size, 18.0f, fishTint, f->v_xy.x);
 					break;
-
 				case 6:
 					DrawFishAutoFlip(jianyu_b2_left, f->xy, f->size, 18.0f, fishTint, f->v_xy.x);
 					break;
-
 				case 7:
 					DrawFishAutoFlip(shayu_b1_left, f->xy, f->size, 20.0f, fishTint, f->v_xy.x);
 					break;
-
 				case 8:
 					DrawFishAutoFlip(shayu_b2_left, f->xy, f->size, 20.0f, fishTint, f->v_xy.x);
 					break;
-
 				case 9:
 					DrawFishAutoFlip(
 						f->image_status == 2 ? hetun_puffed_b1_left : hetun_b1_left,
 						f->xy, f->size, 28.0f, fishTint, f->v_xy.x
 					);
 					break;
-
 				}
 
-
-				if (IsKeyDown(KEY_Q)) {//调试用代码，显示碰撞箱与大小
+				if (IsKeyDown(KEY_Q)) { // 调试用代码，显示碰撞箱与大小
 					Vector2 cj;
-					switch (pool.fishnpc[i].fish.kinds)
-					{
-
+					switch (pool.fishnpc[i].fish.kinds) {
 					case 2:
 					case 9:
 						cj.x = pool.fishnpc[i].fish.xy.x + pool.fishnpc[i].fish.size * 1.4;
 						cj.y = pool.fishnpc[i].fish.xy.y + pool.fishnpc[i].fish.size * 1.3;
-
 						break;
 					case 1:
 					case 3:
@@ -467,15 +439,13 @@ int main() {
 					case 8:
 						cj.x = pool.fishnpc[i].fish.xy.x + pool.fishnpc[i].fish.size * 2;
 						cj.y = pool.fishnpc[i].fish.xy.y + pool.fishnpc[i].fish.size * 2;
-
 						break;
-
 					default:
 						cj.x = pool.fishnpc[i].fish.xy.x + pool.fishnpc[i].fish.size;
 						cj.y = pool.fishnpc[i].fish.xy.y + pool.fishnpc[i].fish.size;
-
 						break;
 					}
+
 					DrawCircle(cj.x, cj.y, pool.fishnpc[i].fish.size, RED);
 					DrawText(
 						TextFormat("Size: %.2f", pool.fishnpc[i].fish.threatsize),
@@ -485,98 +455,136 @@ int main() {
 						WHITE
 					);
 				}
-
 			}
-			//NPC鱼渲染结束
+			// NPC鱼渲染结束
 
-			static int size_threshold[] = {
-				55,  // jieduan 0 -> 1
-				95,  // 1 -> 2
-				140,  // 2 -> 3
-				230,  // 3 -> 4
-				320   // 4 -> 5
-			};
-			if (runingtime % 10 == 0)printf("size:%.2f+threat:%.2f 阶段：%d 下阶段门槛：%lf time:%d san:%.3f fade:%.3f\n", player.size, player.threatsize, jieduan, ((size_threshold[jieduan] * sizetimes) * san / 100), runingtime, san, fade);
-			//调试用代码，显示玩家大小和当前阶段
+			// 注意：size_threshold数组已经在外部声明
+			if (runingtime % 10 == 0) {
+				printf("size:%.2f+threat:%.2f 阶段：%d 下阶段门槛：%lf time:%d san:%.3f fade:%.3f\n",
+					player.size, player.threatsize, jieduan,
+					((size_threshold[jieduan] * sizetimes) * san / 100),
+					runingtime, san, fade);
+			}
+
+			// 调试用代码，显示玩家大小和当前阶段
 			if (jieduan == 5) {
 				if (toumingdu < 1.0f)
-					toumingdu = min(toumingdu + 0.005f, 1.0f);
-				Color a;
-				a.r = 255;
-				a.g = 255;
-				a.b = 255;
-				a.a = (unsigned char)(toumingdu * 255);
-				Rectangle src;
-				src.x = 0;
-				src.y = 0;
-				src.width = (float)jitan.width;
-				src.height = (float)jitan.height;
-				Rectangle dst;
-				dst.width = jitan.width * 3.0f;
-				dst.height = jitan.height * 3.0f;
-				dst.x = (screen_length_x - dst.width) * 0.5f;
-				dst.y = screen_length_y - dst.height;
-				Vector2 origin;
-				origin.x = 0;
-				origin.y = 0;
+					toumingdu = (toumingdu + 0.005f < 1.0f) ? toumingdu + 0.005f : 1.0f;
+
+				Color a = { 255, 255, 255, (unsigned char)(toumingdu * 255) };
+				Rectangle src = { 0, 0, (float)jitan.width, (float)jitan.height };
+				Rectangle dst = {
+					(screen_length_x - jitan.width * 3.0f) * 0.5f,
+					screen_length_y - jitan.height * 3.0f,
+					jitan.width * 3.0f,
+					jitan.height * 3.0f
+				};
+				Vector2 origin = { 0, 0 };
 				DrawTexturePro(jitan, src, dst, origin, 0.0f, a);
 			}
-			runingtime++; san += 0.0001; san -= 0.001 * jieduan;
-			//if (running == 3) {
-			//	DrawText("You Died! Press ESC to Exit.", screen_length_x / 2 - 150, screen_length_y / 2, 20, RED);
-			//	if (IsKeyPressed(KEY_SPACE))running = 1;
-			//}
-			if (!isPaused && uiState == 1) {
+
+			runingtime++;
+			san += 0.0001;
+			san -= 0.001 * jieduan;
+
+			if (!isPaused && uiState == UI_PLAYING) {
 				DrawText("Press SPACE to pause", 10, 10, 20, WHITE);
 			}
+
 			DrawText(
 				TextFormat("Score: %d", runingtime),
 				20,
 				20,
 				24,
-				WHITE);
-			WaitTime(0.05);
+				WHITE
+			);
+
+			
 			EndDrawing();
-			if (!isPaused)runingtime++;
+
+		 runingtime++;
+
 			if (IsKeyPressed(KEY_SPACE)) {
-				isPaused = !isPaused;
+				Image stop_img = LoadImageFromScreen();
+				static bool IF_img_used = 0;
+				if (IF_img_used) UnloadTexture(stop_sight);
+				stop_sight = LoadTextureFromImage(stop_img);
+				UnloadImage(stop_img);
+				IF_img_used = true;
+				uiState = UI_STOP;
+				PollInputEvents();
 			}
-			if (running == 3)
-			{
+
+			if (running == 3) {
 				uiState = UI_DEAD;
 			}
-			
+			break;
 		}
-		break;
+
 		case UI_DEAD:
+		{
+			uiState = UI_DEAD;
 			if (IsKeyPressed(KEY_ENTER)) {
 				uiState = UI_TITLE;
-				running = 1;
-				goto start;
+				PollInputEvents();
+				ui_menu_index = 0;
+				ui_score = 0;
+				running = 1;//0是退出，1是正常，2是暂停，3是死亡
+				sleeptime = 100;
+				screen_length_x = 2048;
+				screen_length_y = 1152;
+				runingtime = 0;
+				player.xy.x = screen_length_x / 2;
+				player.xy.y = screen_length_y / 2;
+				player.v_xy.x = 0;
+				player.v_xy.y = 0;
+				player.a = 5;
+				player.size = 30 * sizetimes;
+				player.image_status = 0;
+				player.lizixiaoguo = 0;
+				player.kinds = 0;
+				bg1_x = 0;
+				bg2_x = 0;
+				bg3_x = 0;
+				bg4_x = 0;//背景偏移量
 			}
+			BeginDrawing();
 			UI_DrawDead();
+			EndDrawing();
+		}
 			break;
+
 		case UI_STOP:
+		{
 			if (IsKeyPressed(KEY_SPACE)) {
 				uiState = UI_PLAYING;
+				PollInputEvents();
 			}
+			BeginDrawing();
+			DrawTexture(stop_sight, 0, -screen_length_y/2, WHITE);
+			DrawRectangle(0, 0,
+				screen_length_x,
+				screen_length_y,
+				Fade(BLACK, 0.4f));
+
+			DrawText("Press SPACE to pause",screen_length_x/2-50, screen_length_y/2, 30, RED);
+			EndDrawing();
+			
+		}
 			break;
 
 		case UI_SETTING:
+		{
+			
 			settings_menu_logic();
-			draw_settings_menu();
+			
 			break;
-				}
+		}
+		}
 
-
-
-				/*	if (running == 3) {
-						WaitTime(5);
-						break;
-					}*/
-				return 0;
-			}
-
+		WaitTime(0.05);
+	}
+	return 0;
 }
 
 	
@@ -1956,10 +1964,7 @@ void draw_settings_menu(void) {
 		screen_length_y - 30, 20, LIGHTGRAY);
 }
 void settings_menu_logic(void) {
-	settings_selected = SETTINGS_VOLUME;
-	settings_end = 1;
-
-	while (settings_end && !WindowShouldClose()) {
+	/*while (settings_end && !WindowShouldClose())*/ {
 		Vector2 mouse = GetMousePosition();
 
 		// 计算设置项位置
@@ -1977,6 +1982,7 @@ void settings_menu_logic(void) {
 				settings_selected = (SettingsItem)i;
 				if (i == SETTINGS_BACK) {
 					settings_end = 0;
+					uiState = UI_TITLE;
 				}
 			}
 		}
@@ -2056,20 +2062,139 @@ void settings_menu_logic(void) {
 		if (IsKeyPressed(KEY_ENTER)) {
 			if (settings_selected == SETTINGS_BACK) {
 				uiState = UI_TITLE;
-			}
-		}
 
-		if (IsKeyPressed(KEY_ESCAPE)) {
-			settings_end = 0;
+			}
 		}
 
 		// 绘制
 		BeginDrawing();
-		draw_settings_menu();  // 再绘制设置菜单
+		draw_settings_menu();  
 		EndDrawing();
 	}
 }
 
+void draw_menu(void) {
+	static Rectangle buttons[COUNT];
 
+
+	const char* menuTexts[COUNT] = {
+		"START",
+		"SETTINGS",
+		"EXIT"
+	};
+
+	// 计算居中位置
+	float buttonWidth = 300.0f;  // 适当加大宽度
+	float buttonHeight = 80.0f;  // 适当加大高度
+	float buttonSpacing = 30.0f;  // 按钮间距
+
+	// 计算总高度
+	float totalHeight = COUNT * buttonHeight + (COUNT - 1) * buttonSpacing;
+
+	// 垂直居中计算
+	float startY = (screen_length_y - totalHeight) / 2.0f;
+
+	// 水平居中计算
+	float startX = (screen_length_x - buttonWidth) / 2.0f;
+
+	// 初始化按钮位置
+	buttons[START] = { startX, startY, buttonWidth, buttonHeight };
+	buttons[SETTINGS] = { startX, startY + buttonHeight + buttonSpacing, buttonWidth, buttonHeight };
+	buttons[EXIT] = { startX, startY + 2 * (buttonHeight + buttonSpacing), buttonWidth, buttonHeight };
+
+
+
+
+	// 绘制背景
+	ClearBackground(BACKGROUND_COLOR);
+
+	// 绘制标题
+	int titleWidth = MeasureText("FISH GAME", 60);
+	int titleX = (screen_length_x - titleWidth) / 2;
+	DrawText("FISH GAME", titleX, 150, 60, SKYBLUE);
+
+	// 绘制所有菜单项
+	for (int i = 0; i < COUNT; i++) {
+		Color buttonColor = BUTTON_NORMAL;
+		Color textColor = TEXT_COLOR;
+		Color borderColor = DARKGRAY;
+
+		// 获取鼠标位置
+		Vector2 mouse = GetMousePosition();
+
+		// 检查鼠标悬停
+		bool isHovered = CheckCollisionPointRec(mouse, buttons[i]);
+
+		// 设置颜色
+		if (i == selected) {
+			buttonColor = BUTTON_SELECTED;  // 当前选中的项
+			textColor = HIGHLIGHT_COLOR;
+			borderColor = HIGHLIGHT_COLOR;
+		}
+		else if (isHovered) {
+			buttonColor = BUTTON_HOVER;     // 鼠标悬停
+			textColor = WHITE;
+		}
+
+		// 绘制按钮背景（圆角矩形）
+		DrawRectangleRounded(buttons[i], 0.3f, 10, buttonColor);
+		DrawRectangleLinesEx(buttons[i], 2, borderColor);
+
+
+		// 计算文字居中位置
+		int textWidth = MeasureText(menuTexts[i], 30);
+		int textX = (int)(buttons[i].x + (buttons[i].width - textWidth) / 2.0f);
+		int textY = (int)(buttons[i].y + (buttons[i].height - 30) / 2.0f);
+
+		// 绘制文字
+		DrawText(menuTexts[i], textX, textY, 30, textColor);
+
+		// 如果是选中项，绘制指示器
+		if (i == selected) {
+			float centerY = buttons[i].y + buttons[i].height / 2.0f;
+
+			// 左侧箭头指示器
+			DrawTriangle(
+				{
+					buttons[i].x - 15.0f, centerY
+				},
+			 {
+				buttons[i].x - 5.0f, centerY - 10.0f
+			 },
+			{
+				buttons[i].x - 5.0f, centerY + 10.0f
+			},
+				HIGHLIGHT_COLOR
+			);
+
+			// 右侧箭头指示器
+			DrawTriangle(
+				{
+					buttons[i].x + buttons[i].width + 15.0f, centerY
+				},
+			{
+				buttons[i].x + buttons[i].width + 5.0f, centerY - 10.0f
+			},
+			{
+				buttons[i].x + buttons[i].width + 5.0f, centerY + 10.0f
+			},
+				HIGHLIGHT_COLOR
+			);
+
+			// 在箭头后面加个小矩形
+			DrawRectangle((int)(buttons[i].x - 30), (int)(centerY - 3), 20, 6, HIGHLIGHT_COLOR);
+			DrawRectangle((int)(buttons[i].x + buttons[i].width + 10), (int)(centerY - 3), 20, 6, HIGHLIGHT_COLOR);
+		}
+	}
+
+	// 绘制操作提示
+	int hintWidth = MeasureText("USE ARROW KEYS TO SELECT, ENTER TO CONFIRM, OR CLICK", 25);
+	int hintX = (screen_length_x - hintWidth) / 2;
+	DrawText("USE ARROW KEYS TO SELECT, ENTER TO CONFIRM, OR CLICK", hintX, screen_length_y - 100, 25, LIGHTGRAY);
+
+	//int escWidth = MeasureText("ESC TO RETURN", 25);
+	//int escX = (screen_length_x - escWidth) / 2;
+	//DrawText("ESC TO RETURN", escX, screen_length_y - 70, 25, LIGHTGRAY);
+}
 
 
