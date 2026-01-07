@@ -98,7 +98,7 @@ int running = 1;//0是退出，1是正常，2是暂停，3是死亡
 int  screen_length_x=1920,screen_length_y=1080,runingtime = 0;
 fish player = { {screen_length_x / 2,screen_length_y / 2},{0,0},5,30.0 * sizetimes,30.0 * sizetimes,0,0,0 };//玩家初始化
 int difficult = 1.5, jieduan = 0;  double san = 100;
-int slow_timer = 0, super_slow_timer = 0,mutation=0, ate_mutant_fish=0,xianji=0;float fade = 1.0f;
+int slow_timer = 0, super_slow_timer = 0,mutation=0, ate_mutant_fish=0,xianji=0,deadtimes=0;float fade = 1.0f;
 bool resetting = 0; 
 int ending_id = 0, compeletedending = 0, deadbymutation = 0, open_I = 0, finish_end0;//结局检查变量
 int collision_redundancy = 0,show_hitbox = 0,developer_mode=0;            //碰撞冗余， 显示碰撞箱,开发者模式
@@ -147,11 +147,28 @@ void collision_player_bossfish(fishPool* pool, int *fishnumber);
 void LoadSave(void)
 {FILE* f = fopen("save.dat", "r");
 	if (!f) return; 
-	int sx, sf, sc;
-	sx = sf = sc = 0;
-	fscanf(f, "xianji=%d\n", &sx);
-	fscanf(f, "finish_end0=%d\n", &sf);
-	fscanf(f, "compeletedending=%d\n", &sc);
+	int sx, sf, sc,sd;
+	sx = sf = sc = sd=0;
+	if (fscanf(f, "xianji=%d\n", &sx) == 1)
+		xianji = sx;
+	else
+		xianji = 0;  // 读取失败时设置默认值
+
+	if (fscanf(f, "finish_end0=%d\n", &sf) == 1)
+		finish_end0 = sf;
+	else
+		finish_end0 = 0;
+
+	if (fscanf(f, "compeletedending=%d\n", &sc) == 1)
+		compeletedending = sc;
+	else
+		compeletedending = 0;
+
+	if (fscanf(f, "deadtimes=%d\n", &sd) == 1)
+		deadtimes = sd;
+	else
+		deadtimes = 0;
+
 	fclose(f);
 }
 void SaveGame(void)
@@ -161,6 +178,7 @@ void SaveGame(void)
 	fprintf(f, "xianji=%d\n", xianji);
 	fprintf(f, "finish_end0=%d\n", finish_end0);
 	fprintf(f, "compeletedending=%d\n", compeletedending);
+	fprintf(f, "deadtimes=%d\n", deadtimes);
 	fclose(f);
 }
 
@@ -315,7 +333,7 @@ int main() {
 
 		case UI_PLAYING:
 		{
-			if (IsKeyDown(KEY_SPACE)) {
+			if (IsKeyPressed(KEY_SPACE)) {
 				Image stop_img = LoadImageFromScreen();
 				static bool IF_img_used = 0;
 				if (IF_img_used) UnloadTexture(stop_sight);
@@ -339,25 +357,7 @@ int main() {
 			draw_player_glow();
 			draw_fish_glow(&pool);
 
-			// 注意：toumingdu已经在外部声明，这里直接使用
-			if (jieduan == 5) {
-				if (toumingdu >= 0.95) {
-					if (check_jitan_sacrifice(jitan)) {
-						// 祭坛检查逻辑
-						if (xianji == 0) {
-							xianji = 1;
-							running = 3;
-							SaveGame();
-						}
-						else {
-							xianji = 0;
-							player.threatsize = 60;
-							uiState = UI_BOSS;
-							SaveGame();
-						}
-					}
-				}
-			}
+			
 
 			float t = depthTrans.tone;
 			t = t * t;   // 和光圈一致
@@ -501,7 +501,27 @@ int main() {
 				}
 			}
 			// NPC鱼渲染结束
-
+			if (show_hitbox) {
+				if (IsKeyDown(KEY_Q)) {
+					Vector2 cj;
+					cj.x = player.xy.x + 1.3 * player.size; cj.y = player.xy.y + 1.4 * player.size;
+					DrawCircle(cj.x, cj.y, player.size, RED);
+					DrawText(
+						TextFormat("Size: %.2f", player.threatsize),
+						cj.x,
+						cj.y,
+						24,
+						WHITE
+					);
+				}
+			}
+			if (mutation >= 3) {
+				static int get_ablility = 0;
+				if (get_ablility < 100) {
+					get_ablility++;
+					DrawText("You feel stronger and better.(Double Tap Ability Unlocked)", screen_length_x / 2 - 300, screen_length_y - 80, 20, YELLOW);
+				}
+			}
 			// 注意：size_threshold数组已经在外部声明
 			if(developer_mode){
 				if (runingtime % 10 == 0) {
@@ -637,6 +657,25 @@ int main() {
 					DrawText(tip, x, y, fontSize, Fade(WHITE, 0.75f));
 				}
 			}
+			// 注意：toumingdu已经在外部声明，这里直接使用
+			if (jieduan == 5) {
+				if (toumingdu >= 0.95) {
+					if (check_jitan_sacrifice(jitan)) {
+						// 祭坛检查逻辑
+						if (xianji == 0) {
+							xianji = 1;
+							running = 3;
+							SaveGame();
+						}
+						else {
+							xianji = 0;
+							player.threatsize = 60;
+							uiState = UI_BOSS;
+							SaveGame();
+						}
+					}
+				}
+			}
 			DrawText(
 				TextFormat("Score: %d", runingtime),
 				20,
@@ -678,6 +717,7 @@ int main() {
 				selected = START;//UI数据
 				difficult = 1.5; jieduan = 0; san = 100.0f; deadbymutation = 0; open_I = 0;
 				slow_timer = 0; super_slow_timer = 0;if(!xianji) mutation = 0; if(!xianji)ate_mutant_fish = 0; fade = 1.0f; toumingdu = 0;
+				depthTrans.active = 0; depthTrans.shift = 0; depthTrans.target = 0; depthTrans.tone = 0;
 				//全局变量初始化
 				init_fish_pool(&pool);
 				srand(time(NULL));//函数初始化
@@ -697,7 +737,7 @@ int main() {
 			else if (jieduan == 1)ending_id = 2;
 			else if (jieduan == 0 && runingtime >= 10000 && san >= 100)ending_id = 0;
 			else if (jieduan == 0)ending_id = 1;
-			if (ending_id == 0)finish_end0 = 1; 
+			if (ending_id == 0)finish_end0 = 1; deadtimes++;
 			SaveGame();
 			BeginDrawing();
 			UI_DrawEnding();
@@ -711,6 +751,9 @@ int main() {
 				uiState = UI_PLAYING;
 				PollInputEvents();
 			}
+			if (IsKeyPressed(KEY_E)) {
+				uiState = UI_TITLE;
+			}
 			BeginDrawing();
 			DrawTexture(stop_sight, 0, -screen_length_y/2, WHITE);
 			DrawRectangle(0, 0,
@@ -718,7 +761,8 @@ int main() {
 				screen_length_y,
 				Fade(BLACK, 0.4f));
 
-			DrawText("Press SPACE to pause",screen_length_x/2-50, screen_length_y/2, 30, RED);
+			DrawText("Press SPACE to pause",screen_length_x/2-200, screen_length_y/2, 40, RED);
+			DrawText("Press E to TITLE", screen_length_x / 2 - 80, screen_length_y / 2+40, 30,GRAY);
 			EndDrawing();
 			
 		}
@@ -748,7 +792,7 @@ int main() {
 			static int   boss_wave_loop = 0;
 			// ================= BOSS Wave 调度 =================
 			boss_wave_timer += 0.02f;
-			static int fishnumber =(int) (ate_mutant_fish ) *100/ (san * 7)*difficult+1;
+			static int fishnumber = (int)min((deadtimes) * 100.0f / (san * 3) * difficult + 1,25);
 			switch (boss_wave_phase)
 			{
 			case 0:
@@ -995,7 +1039,7 @@ void playermove(fish* player) {
 	if(resetting)init_a = 5.0f;
 	static int last_mutation = 0;
 	if (resetting)last_mutation = 0;
-	if (IsKeyDown(KEY_SPACE)) {
+	if (IsKeyPressed(KEY_SPACE)) {
 		running = 2;
 		return;
 	}
@@ -1271,7 +1315,7 @@ fish_NPC* create_npcfish(fishPool* pool, float x, float y, int kind) {
 
 
 	static int danger_rate[] = {
-		20, 30, 25, 35, 40, 50
+		20, 30, 25, 30, 35, 50
 	};
 	int is_danger = (rand() % 100) < danger_rate[jieduan], threatsize0 = 1;
 	if (!is_danger)
@@ -1556,7 +1600,9 @@ void draw_background1(void)
 	static int start = 0;
 	static float bg1_x = 0, bg2_x = 0,bg3_x = 0,bg4_x = 0;//背景偏移量
 	
-	if (resetting) { bg1_x = 0; bg2_x = 0; bg3_x = 0; bg4_x = 0; }
+	if (resetting) {
+		bg1_x = 0; bg2_x = 0; bg3_x = 0; bg4_x = 0; 
+	}
 	
 	static Texture bg1, bg2, bg3, bg4, bg5;
 	if (!start) {
@@ -1675,10 +1721,10 @@ void change_difficult(fishPool* pool) {
 	int possibility[5] = { 23,22,25,28,30 };
 	static int size_threshold[] = {
 		55,  // jieduan 0 -> 1
-		95,  // 1 -> 2
-		140,  // 2 -> 3
+		90,  // 1 -> 2
+		135,  // 2 -> 3
 		230,  // 3 -> 4
-		320   // 4 -> 5
+		350   // 4 -> 5
 	};
 	if (jieduan < 5 && player.threatsize >((size_threshold[jieduan] * sizetimes) * san / 100))
 
