@@ -94,6 +94,7 @@ typedef enum {
 UIState uiState = UI_TITLE;
 int ui_menu_index = 0;
 MenuItem selected = START;//UI数据
+Music bgMusic;
 int running = 1;//0是退出，1是正常，2是暂停，3是死亡
 int  screen_length_x=1920,screen_length_y=1080,runingtime = 0;
 fish player = { {screen_length_x / 2,screen_length_y / 2},{0,0},5,30.0 * sizetimes,30.0 * sizetimes,0,0,0 };//玩家初始化
@@ -104,7 +105,6 @@ int ending_id = 0, compeletedending = 0, deadbymutation = 0, open_I = 0, finish_
 int collision_redundancy = 0,show_hitbox = 0,developer_mode=0;            //碰撞冗余， 显示碰撞箱,开发者模式
 
 void playermove(fish* player);
-void npc_move(fish_NPC* npc);
 void init_fish_pool(fishPool* pool);
 fish_NPC* get_fish(fishPool* pool);
 void release_fish(fishPool* pool, fish_NPC* fishPtr);
@@ -184,8 +184,6 @@ void SaveGame(void)
 
 
 int main() {
-	screen_length_x = 2048;
-	screen_length_y = 1152;
 	game_resolution = 3;
 	// 根据默认分辨率设置窗口大小
 	switch (game_resolution) {
@@ -226,8 +224,8 @@ int main() {
 
 	Texture hetun_left =LoadTexture("../img/fish/河豚 左向.png");
 	Texture hetun_puffed_left =LoadTexture("../img/fish/河豚 鼓起 左向.png");
-	Texture hetun_b1_left = LoadTexture("../img/fish/河豚 变异1 左向.png");
 	Texture hetun_puffed_b1_left = LoadTexture("../img/fish/河豚 鼓起 变异1 左向.png");
+	Texture hetun_b1_left = LoadTexture("../img/fish/河豚 变异1 左向.png");
 
 	Texture jianyu_left =LoadTexture("../img/fish/剑鱼 左向.png");
 	Texture jianyu_b1_left =LoadTexture("../img/fish/剑鱼 变异1 左向.png");
@@ -238,7 +236,10 @@ int main() {
 	Texture shayu_b2_left =LoadTexture("../img/fish/鲨鱼 变异2 左向.png");
 
 	Texture jitan =LoadTexture("../img/other/祭坛.png");
-
+	InitAudioDevice();  // 初始化音频设备
+	bgMusic = LoadMusicStream("../music/background.mp3");
+	SetMusicVolume(bgMusic, 0.3f);  
+	PlayMusicStream(bgMusic);
 	SetWindowState(FLAG_VSYNC_HINT);
 	fishPool pool;
 	init_fish_pool(&pool);
@@ -257,7 +258,7 @@ int main() {
 	LoadSave();
 	//**************************************************************主循环********************************************************************//
 	while (!WindowShouldClose()) {
-		
+		UpdateMusicStream(bgMusic);
 		static Texture stop_sight;
 		switch (uiState) {
 		case UI_TITLE:
@@ -605,7 +606,7 @@ int main() {
 			}
 			
 			runingtime++;
-			san += 0.0001;
+			san += 0.00005;
 			san -= 0.001 * jieduan*jieduan;
 
 			if (!isPaused && uiState == UI_PLAYING) {
@@ -687,8 +688,6 @@ int main() {
 
 		 runingtime++;
 		    if (resetting)resetting = 0;
-			
-			
 			if (running == 3) {
 				uiState = UI_END;
 			}
@@ -697,12 +696,13 @@ int main() {
 
 		case UI_END:
 		{
-			SaveGame();
+			SaveGame(); static int endend = 0;
 			if (IsKeyPressed(KEY_ENTER)) {
 				uiState = UI_TITLE;
 				PollInputEvents();
 				//初始化
 				ui_menu_index = 0;
+				endend = 0;
 				running = 1;//0是退出，1是正常，2是暂停，3是死亡
 				runingtime = 0;
 				player.xy.x = screen_length_x / 2;
@@ -723,22 +723,27 @@ int main() {
 				srand(time(NULL));//函数初始化
 				resetting = 1;//静态本地变量初始化
 			}
-			if (player.size < 35)ending_id = 12;
-			else if (compeletedending && finish_end0 && mutation <= 4)ending_id = 11;
-			else if (compeletedending && fade <= 0.6f)ending_id = 9;
-			else if (compeletedending)ending_id = 10;
-			else if (!compeletedending && open_I)ending_id = 8;
-			else if (xianji == 1&&jieduan==5)ending_id = 7;
-			else if (fade <= 0.0f)ending_id = 13;
-			else if (san <= 0.0f)ending_id = 5;
-			else if (ate_mutant_fish && jieduan >= 3)ending_id = 6;
-			else if (deadbymutation && jieduan >= 2)ending_id = 4;
-			else if (!deadbymutation && jieduan >= 2)ending_id = 3;
-			else if (jieduan == 1)ending_id = 2;
-			else if (jieduan == 0 && runingtime >= 10000 && san >= 100)ending_id = 0;
-			else if (jieduan == 0)ending_id = 1;
-			if (ending_id == 0)finish_end0 = 1; deadtimes++;
-			SaveGame();
+			if(!endend)
+			{
+				if (player.size < 35)ending_id = 12;
+				else if (compeletedending && finish_end0 && mutation <= 4)ending_id = 11;
+				else if (compeletedending && fade <= 0.6f)ending_id = 9;
+				else if (compeletedending)ending_id = 10;
+				else if (!compeletedending && open_I)ending_id = 8;
+				else if (xianji == 1 && jieduan == 5)ending_id = 7;
+				else if (fade <= 0.0f)ending_id = 13;
+				else if (san <= 0.0f)ending_id = 5;
+				else if (ate_mutant_fish && jieduan >= 3)ending_id = 6;
+				else if (deadbymutation && jieduan >= 2)ending_id = 4;
+				else if (!deadbymutation && jieduan >= 2)ending_id = 3;
+				else if (jieduan == 1)ending_id = 2;
+				else if (jieduan == 0 && runingtime >= 10000 && san >= 100)ending_id = 0;
+				else if (jieduan == 0)ending_id = 1;
+				if (ending_id == 0)finish_end0 = 1;
+				deadtimes++;
+				SaveGame();
+				endend = 1;
+			}
 			BeginDrawing();
 			UI_DrawEnding();
 			EndDrawing();
@@ -753,6 +758,8 @@ int main() {
 			}
 			if (IsKeyPressed(KEY_E)) {
 				uiState = UI_TITLE;
+			}if (IsKeyPressed(KEY_R)) {
+				uiState = UI_END;
 			}
 			BeginDrawing();
 			DrawTexture(stop_sight, 0, -screen_length_y/2, WHITE);
@@ -761,8 +768,9 @@ int main() {
 				screen_length_y,
 				Fade(BLACK, 0.4f));
 
-			DrawText("Press SPACE to pause",screen_length_x/2-200, screen_length_y/2, 40, RED);
+			DrawText("Press SPACE to pause",screen_length_x/2-180, screen_length_y/2, 40, RED);
 			DrawText("Press E to TITLE", screen_length_x / 2 - 80, screen_length_y / 2+40, 30,GRAY);
+			DrawText("Press R to OVERGAME", screen_length_x / 2 - 100, screen_length_y / 2 + 80, 30, GRAY);
 			EndDrawing();
 			
 		}
@@ -994,8 +1002,11 @@ int main() {
 		}
 		
 		WaitTime(0.05);
-
+		
 	}
+	StopMusicStream(bgMusic);
+	UnloadMusicStream(bgMusic);
+	CloseAudioDevice();
 	return 0;
 }
 
@@ -1047,7 +1058,9 @@ void playermove(fish* player) {
 		last_mutation = mutation;
 		init_a += 0.5;
 	}
-	
+	if (IsKeyPressed(KEY_Z)) {
+		player->threatsize += 20; san -= 5;
+	}
     player->size = 80*atan((player->threatsize-42)/80)+42;
 	if (fade <= 0.6f) { fade -= 0.0001; }
 	fade = max(fade, 0);
@@ -1103,10 +1116,10 @@ void playermove(fish* player) {
 				switch (keyIndex) {
 				case 0: derta_vx += player->a * 10; break;
 				case 1: derta_vx -= player->a * 10; break;
-				case 2: derta_vy += player->a * 10; break;
-				case 3: derta_vy -= player->a * 10; break;
+				case 2: derta_vy += player->a * 12; break;
+				case 3: derta_vy -= player->a * 12; break;
 				}
-				cooldown = 80;
+				cooldown = 60;
 				keyPressCount[keyIndex] = 0;
 			}
 			else {
@@ -2095,7 +2108,7 @@ void UI_DrawEnding(void)
 		ending_id = 0;
 
 	EndingUI* e = &ending_table[ending_id];
-	//int size = e->fontSize + (rand() % 3 - 1);//跳动
+	int size = e->fontSize + (rand() % 3 - 1);
 	DrawRectangle(
 		0,
 		0,
@@ -2103,14 +2116,24 @@ void UI_DrawEnding(void)
 		screen_length_y,
 		Fade(BLACK, 0.7f)
 	);
-
-	DrawText(
-		e->title,
-		screen_length_x / 2 - MeasureText(e->title, e->fontSize) / 2,
-		screen_length_y / 2 - e->fontSize / 2,
-		e->fontSize,
-		e->color
-	);
+	if (ending_id == 10 || ending_id == 7 || ending_id == 5) {
+		DrawText(
+			e->title,
+			screen_length_x / 2 - MeasureText(e->title, e->fontSize) / 2,
+			screen_length_y / 2 - e->fontSize / 2,
+			size,
+			e->color
+		);
+	}
+	else {
+		DrawText(
+			e->title,
+			screen_length_x / 2 - MeasureText(e->title, e->fontSize) / 2,
+			screen_length_y / 2 - e->fontSize / 2,
+			e->fontSize,
+			e->color
+		);
+	}
 	DrawText(TextFormat("Score: %d", runingtime), screen_length_x / 2 - 80, screen_length_y / 2+e->fontSize, 24, WHITE);
 	DrawText(
 		"PRESS ENTER TO RETURN",
@@ -2320,8 +2343,7 @@ void settings_menu_logic(void) {
 				game_volume += direction * 0.1f;
 				if (game_volume < 0.0f) game_volume = 0.0f;
 				if (game_volume > 1.0f) game_volume = 1.0f;
-				// 这里可以添加设置音量的代码
-				// SetMasterVolume(game_volume);
+				SetMusicVolume(bgMusic, game_volume);  
 				break;
 
 			case SETTINGS_DIFFICULTY:
